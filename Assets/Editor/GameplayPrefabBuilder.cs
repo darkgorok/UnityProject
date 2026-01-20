@@ -98,17 +98,30 @@ public static class GameplayPrefabBuilder
         rigidbody.useGravity = false;
         rigidbody.isKinematic = true;
 
+        var scaleController = root.AddComponent<PlayerScaleController>();
+        var squashAnimator = root.AddComponent<PlayerSquashAnimator>();
+        var spawner = root.AddComponent<PlayerProjectileSpawner>();
+        var shootInput = root.AddComponent<PlayerShootInput>();
+        var shootGate = root.AddComponent<PlayerShootGate>();
+        var failWatcher = root.AddComponent<PlayerFailWatcher>();
+        var movement = root.AddComponent<PlayerMovement>();
         var shooting = root.AddComponent<PlayerShooting>();
-        var shootingSerialized = new SerializedObject(shooting);
-        shootingSerialized.FindProperty("projectilePrefab").objectReferenceValue = projectilePrefab != null
+
+        var spawnerSerialized = new SerializedObject(spawner);
+        spawnerSerialized.FindProperty("projectilePrefab").objectReferenceValue = projectilePrefab != null
             ? projectilePrefab.GetComponent<Projectile>()
             : null;
-        shootingSerialized.ApplyModifiedPropertiesWithoutUndo();
+        spawnerSerialized.ApplyModifiedPropertiesWithoutUndo();
 
-        root.AddComponent<PlayerShootInput>();
-        root.AddComponent<PlayerShootGate>();
-        root.AddComponent<PlayerFailWatcher>();
-        root.AddComponent<PlayerMovement>();
+        var shootingSerialized = new SerializedObject(shooting);
+        shootingSerialized.FindProperty("shootInput").objectReferenceValue = shootInput;
+        shootingSerialized.FindProperty("shootGate").objectReferenceValue = shootGate;
+        shootingSerialized.FindProperty("failWatcher").objectReferenceValue = failWatcher;
+        shootingSerialized.FindProperty("movement").objectReferenceValue = movement;
+        shootingSerialized.FindProperty("scaleController").objectReferenceValue = scaleController;
+        shootingSerialized.FindProperty("squashAnimator").objectReferenceValue = squashAnimator;
+        shootingSerialized.FindProperty("projectileSpawner").objectReferenceValue = spawner;
+        shootingSerialized.ApplyModifiedPropertiesWithoutUndo();
 
         var prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
         Object.DestroyImmediate(root);

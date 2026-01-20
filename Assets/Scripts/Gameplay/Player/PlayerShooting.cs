@@ -1,11 +1,10 @@
 using System;
 using UnityEngine;
 using Zenject;
-using DG.Tweening;
 
 [RequireComponent(typeof(Collider))]
 [RequireComponent(typeof(PlayerMarker))]
-public class PlayerShooting : MonoBehaviour, ITickable
+public class PlayerShooting : MonoBehaviour
 {
     private enum ShootingState
     {
@@ -15,57 +14,41 @@ public class PlayerShooting : MonoBehaviour, ITickable
         Cooldown
     }
 
-    [System.Serializable]
-    private struct ShotTuning
+    private sealed class ShootingStateMachine
     {
-        public float minProjectileScale;
-        public float maxProjectileScale;
-        public float maxChargeTime;
-        public float projectileSpeed;
-        public float shrinkFactor;
-        public float infectionRadiusMultiplier;
-        [Range(0.05f, 0.5f)] public float minPlayerScaleRatio;
-        [Range(0.1f, 0.3f)] public float criticalPlayerScaleRatio;
-        public float chargeSquashScale;
-        public float chargeSquashDuration;
-        public float releaseExpandDuration;
-        public float chargeScaleSmoothTime;
-        public float cooldownDuration;
+        public ShootingState State { get; private set; } = ShootingState.Idle;
+
+        public void SetState(ShootingState next)
+        {
+            if (State == next)
+                return;
+
+            State = next;
+        }
     }
 
     [Header("References")]
-    [SerializeField] private Projectile projectilePrefab;
-    [SerializeField] private PlayerShootingConfig config;
+    [SerializeField] private ShotTuningConfig tuning;
     [SerializeField] private Collider playerCollider;
     [SerializeField] private PlayerShootInput shootInput;
     [SerializeField] private PlayerShootGate shootGate;
     [SerializeField] private PlayerFailWatcher failWatcher;
     [SerializeField] private PlayerMovement movement;
+    [SerializeField] private PlayerScaleController scaleController;
+    [SerializeField] private PlayerSquashAnimator squashAnimator;
+    [SerializeField] private PlayerProjectileSpawner projectileSpawner;
 
-    [Header("Tuning")]
-    [SerializeField] private ShotTuning tuning = new ShotTuning
-    {
-        minProjectileScale = 0.3f,
-        maxProjectileScale = 1.5f,
-        maxChargeTime = 1.5f,
-        projectileSpeed = 11f,
-        shrinkFactor = 0.7f,
-        infectionRadiusMultiplier = 0.8f,
-        minPlayerScaleRatio = 0.2f,
-        criticalPlayerScaleRatio = 0.18f,
-        chargeSquashScale = 0.85f,
-        chargeSquashDuration = 0.08f,
-        releaseExpandDuration = 0.06f,
-        chargeScaleSmoothTime = 0.08f,
-        cooldownDuration = 0.1f
-    };
+    private readonly ShootingStateMachine _stateMachine = new ShootingStateMachine();
+    private ShotCalculator _calculator;
+    private PlayerChargeController _chargeController;
+    private readonly CooldownController _cooldownController = new CooldownController();
 
-    public float AvailableScale => _availableScale;
-    public float MinPlayerScale => _minPlayerScale;
-    public bool IsCharging => _state == ShootingState.Charging;
+    public float AvailableScale => scaleController != null ? scaleController.AvailableScale : 0f;
+    public float MinPlayerScale => scaleController != null ? scaleController.MinScale : 0f;
+    public bool IsCharging => _stateMachine.State == ShootingState.Charging;
     public bool HasActiveProjectile => _activeProjectile != null;
-    public bool CanBeginCharge => !_blocked && _state == ShootingState.Idle && _activeProjectile == null
-        && _availableScale > _minPlayerScale && IsGameplayActive();
+    public bool CanBeginCharge => !_blocked && _stateMachine.State == ShootingState.Idle && _activeProjectile == null
+        && scaleController != null && scaleController.AvailableScale > scaleController.MinScale && IsGameplayActive();
     public event Action<float> ShotReleased;
     public event Action ShotCompleted;
     public PlayerShootInput ShootInput => shootInput;
@@ -73,44 +56,23 @@ public class PlayerShooting : MonoBehaviour, ITickable
     public PlayerFailWatcher FailWatcher => failWatcher;
     public PlayerMovement Movement => movement;
 
-    private float _initialScale;
-    private float _availableScale;
-    private float _minPlayerScale;
-    private float _criticalPlayerScale;
-    private ShootingState _state = ShootingState.Idle;
-    private float _chargeTime;
     private float _previewShotScale;
     private bool _blocked;
     private Projectile _activeProjectile;
     private bool _pendingOverchargeFail;
-    private float _cooldownTimer;
     [Inject(Optional = true)] private IAimDirectionProvider _aimProvider;
     [Inject(Optional = true)] private IGameFlowController _gameFlow;
     [Inject(Optional = true)] private IFailController _failController;
     [Inject(Optional = true)] private IObstacleRegistry _levelManager;
     [Inject] private ITimeProvider _timeProvider;
-    [Inject(Optional = true)] private Projectile.Pool _projectilePool;
-    [Inject(Optional = true)] private DiContainer _container;
-    private float _baseScale;
-    private float _currentBaseScale;
-    private float _scaleVelocity;
-    private float _visualXzMultiplier = 1f;
-    private Tween _squashTween;
 
     private void Awake()
     {
-        ApplyTuning();
-        _initialScale = transform.localScale.x;
-        _availableScale = _initialScale;
-        _minPlayerScale = _initialScale * tuning.minPlayerScaleRatio;
-        _criticalPlayerScale = Mathf.Max(_initialScale * tuning.criticalPlayerScaleRatio, _minPlayerScale);
+        _calculator = new ShotCalculator(tuning);
+        _chargeController = new PlayerChargeController(tuning, _calculator, scaleController, squashAnimator);
 
-        if (playerCollider != null)
-            playerCollider.isTrigger = false;
-
-        _baseScale = _availableScale;
-        _currentBaseScale = _baseScale;
-        ApplyScale();
+        var initialScale = transform.localScale.x;
+        scaleController.Initialize(initialScale, tuning.minPlayerScaleRatio, tuning.criticalPlayerScaleRatio);
     }
 
     private void Start()
@@ -141,9 +103,9 @@ public class PlayerShooting : MonoBehaviour, ITickable
             _levelManager.PathCleared -= HandlePathCleared;
     }
 
-    public void Tick()
+    private void Update()
     {
-        if (_state == ShootingState.Cooldown)
+        if (_stateMachine.State == ShootingState.Cooldown)
             TickCooldown();
     }
 
@@ -159,7 +121,8 @@ public class PlayerShooting : MonoBehaviour, ITickable
     {
         if (!CanBeginCharge)
         {
-            if (!_blocked && _activeProjectile == null && _availableScale <= _minPlayerScale)
+            if (!_blocked && _activeProjectile == null && scaleController != null &&
+                scaleController.AvailableScale <= scaleController.MinScale)
                 TriggerFailure(ResultReason.NotEnoughSizeForShot);
             return false;
         }
@@ -170,38 +133,51 @@ public class PlayerShooting : MonoBehaviour, ITickable
 
     public void TickCharge(float deltaTime)
     {
-        if (_state != ShootingState.Charging || _blocked)
+        if (_stateMachine.State != ShootingState.Charging || _blocked)
             return;
 
-        _chargeTime += deltaTime;
-        UpdateCharging();
+        if (_chargeController == null)
+            return;
+
+        if (!_chargeController.Tick(deltaTime, out var shouldAutoRelease))
+        {
+            TriggerFailure(ResultReason.NotEnoughSizeForShot);
+            return;
+        }
+
+        _previewShotScale = _chargeController.PreviewShotScale;
+        if (shouldAutoRelease)
+        {
+            ReleaseShot();
+            return;
+        }
     }
 
     public void ReleaseShot()
     {
-        if (_state != ShootingState.Charging)
+        if (_stateMachine.State != ShootingState.Charging)
             return;
 
         ExitCharging();
 
         if (_previewShotScale <= 0f || _blocked || !IsGameplayActive())
         {
-            SetBaseScaleImmediate(_availableScale);
+            if (scaleController != null)
+                scaleController.SetBaseScaleImmediate(scaleController.AvailableScale);
             return;
         }
 
         var shrinkAmount = GetShrinkAmount(_previewShotScale);
-        _availableScale = Mathf.Max(_availableScale - shrinkAmount, _minPlayerScale);
-        SetBaseScaleImmediate(_availableScale);
+        scaleController?.ApplyShrink(shrinkAmount);
         PlaySquash(1f, tuning.releaseExpandDuration);
 
         SpawnProjectile(_previewShotScale);
         if (!_blocked)
             ShotReleased?.Invoke(_previewShotScale);
         if (_activeProjectile != null)
-            _state = ShootingState.ShotInFlight;
+            _stateMachine.SetState(ShootingState.ShotInFlight);
 
-        if (_availableScale <= _criticalPlayerScale)
+        if (scaleController != null && scaleController.AvailableScale <= scaleController.CriticalScale)
         {
             _pendingOverchargeFail = true;
             return;
@@ -213,8 +189,7 @@ public class PlayerShooting : MonoBehaviour, ITickable
     public void CancelCharge()
     {
         ExitCharging();
-        SetBaseScaleImmediate(_availableScale);
-        PlaySquash(1f, tuning.releaseExpandDuration);
+        _chargeController?.CancelCharge();
     }
 
     public void TriggerFailure(ResultReason reason)
@@ -223,8 +198,7 @@ public class PlayerShooting : MonoBehaviour, ITickable
             return;
 
         _blocked = true;
-        _state = ShootingState.Idle;
-        _cooldownTimer = 0f;
+        _stateMachine.SetState(ShootingState.Idle);
         _pendingOverchargeFail = false;
         CancelCharge();
         if (_failController != null)
@@ -247,19 +221,9 @@ public class PlayerShooting : MonoBehaviour, ITickable
             return;
 
         var spawnPosition = transform.position;
-        Projectile projectileComponent = null;
-
-        if (_projectilePool != null)
-        {
-            projectileComponent = _projectilePool.Spawn();
-            projectileComponent.transform.SetPositionAndRotation(spawnPosition, Quaternion.identity);
-        }
-        else if (projectilePrefab != null)
-        {
-            projectileComponent = Instantiate(projectilePrefab);
-            _container?.InjectGameObject(projectileComponent.gameObject);
-            projectileComponent.transform.SetPositionAndRotation(spawnPosition, Quaternion.identity);
-        }
+        var projectileComponent = projectileSpawner != null
+            ? projectileSpawner.Spawn(spawnPosition, Quaternion.identity)
+            : null;
 
         if (projectileComponent == null)
             return;
@@ -298,17 +262,17 @@ public class PlayerShooting : MonoBehaviour, ITickable
         {
             if (tuning.cooldownDuration > 0f)
             {
-                _state = ShootingState.Cooldown;
-                _cooldownTimer = tuning.cooldownDuration;
+                _stateMachine.SetState(ShootingState.Cooldown);
+                _cooldownController.Start(tuning.cooldownDuration);
             }
             else
             {
-                _state = ShootingState.Idle;
+                _stateMachine.SetState(ShootingState.Idle);
             }
         }
         else
         {
-            _state = ShootingState.Idle;
+            _stateMachine.SetState(ShootingState.Idle);
         }
         ShotCompleted?.Invoke();
         TryResolvePendingFail();
@@ -316,87 +280,21 @@ public class PlayerShooting : MonoBehaviour, ITickable
 
     private void TickCooldown()
     {
-        _cooldownTimer -= _timeProvider.DeltaTime;
-        if (_cooldownTimer <= 0f)
+        if (_cooldownController.Tick(_timeProvider.DeltaTime))
         {
-            _cooldownTimer = 0f;
-            _state = ShootingState.Idle;
+            _stateMachine.SetState(ShootingState.Idle);
         }
-    }
-
-    private float GetMaxShotScaleBySize()
-    {
-        return Mathf.Max((_availableScale - _minPlayerScale) / tuning.shrinkFactor, 0f);
     }
 
     private float GetShrinkAmount(float shotScale)
     {
-        return shotScale * tuning.shrinkFactor;
-    }
-
-    private void OnDestroy()
-    {
-        if (_squashTween != null)
-            _squashTween.Kill();
-    }
-
-    private void SetBaseScaleImmediate(float scale)
-    {
-        _baseScale = scale;
-        _currentBaseScale = scale;
-        _scaleVelocity = 0f;
-        ApplyScale();
-    }
-
-    private void SetBaseScaleSmoothed(float scale)
-    {
-        _baseScale = scale;
-        if (tuning.chargeScaleSmoothTime <= 0f)
-        {
-            _currentBaseScale = scale;
-            _scaleVelocity = 0f;
-            ApplyScale();
-            return;
-        }
-
-        _currentBaseScale = Mathf.SmoothDamp(
-            _currentBaseScale,
-            _baseScale,
-            ref _scaleVelocity,
-            tuning.chargeScaleSmoothTime);
-        ApplyScale();
-    }
-
-    private void ApplyScale()
-    {
-        transform.localScale = new Vector3(
-            _currentBaseScale * _visualXzMultiplier,
-            _currentBaseScale,
-            _currentBaseScale * _visualXzMultiplier);
+        return _calculator != null ? _calculator.GetShrinkAmount(shotScale) : 0f;
     }
 
     private void PlaySquash(float targetMultiplier, float duration)
     {
-        if (duration <= 0f)
-        {
-            _visualXzMultiplier = targetMultiplier;
-            ApplyScale();
-            return;
-        }
-
-        if (_squashTween != null)
-            _squashTween.Kill();
-
-        _squashTween = DOTween.To(
-                () => _visualXzMultiplier,
-                value =>
-                {
-                    _visualXzMultiplier = value;
-                    ApplyScale();
-                },
-                targetMultiplier,
-                duration)
-            .SetEase(Ease.OutQuad);
+        if (squashAnimator != null)
+            squashAnimator.Play(targetMultiplier, duration);
     }
 
     private bool IsGameplayActive()
@@ -426,104 +324,21 @@ public class PlayerShooting : MonoBehaviour, ITickable
         _pendingOverchargeFail = false;
     }
 
-    private void ApplyTuning()
-    {
-        if (config == null)
-            return;
-
-        tuning.minProjectileScale = config.minProjectileScale;
-        tuning.maxProjectileScale = config.maxProjectileScale;
-        tuning.maxChargeTime = config.maxChargeTime;
-        tuning.projectileSpeed = config.projectileSpeed;
-        tuning.shrinkFactor = config.shrinkFactor;
-        tuning.infectionRadiusMultiplier = config.infectionRadiusMultiplier;
-        tuning.minPlayerScaleRatio = config.minPlayerScaleRatio;
-        tuning.criticalPlayerScaleRatio = config.criticalPlayerScaleRatio;
-        tuning.chargeSquashScale = config.chargeSquashScale;
-        tuning.chargeSquashDuration = config.chargeSquashDuration;
-        tuning.releaseExpandDuration = config.releaseExpandDuration;
-        tuning.chargeScaleSmoothTime = config.chargeScaleSmoothTime;
-        tuning.cooldownDuration = config.cooldownDuration;
-    }
-
     private void ValidateReferences()
     {
-        if (_projectilePool == null && projectilePrefab == null)
-            Debug.LogError("PlayerShooting: projectilePrefab is not assigned and no pool is bound.", this);
-        if (playerCollider == null)
-            Debug.LogError("PlayerShooting: playerCollider is not assigned.", this);
-        if (shootInput == null)
-            Debug.LogError("PlayerShooting: shootInput is not assigned.", this);
-        if (shootGate == null)
-            Debug.LogError("PlayerShooting: shootGate is not assigned.", this);
-        if (failWatcher == null)
-            Debug.LogError("PlayerShooting: failWatcher is not assigned.", this);
-        if (movement == null)
-            Debug.LogError("PlayerShooting: movement is not assigned.", this);
+        projectileSpawner.ValidateReferences(this);
     }
 
     private void EnterCharging()
     {
-        _state = ShootingState.Charging;
-        _chargeTime = 0f;
-        _previewShotScale = tuning.minProjectileScale;
-        PlaySquash(tuning.chargeSquashScale, tuning.chargeSquashDuration);
+        _stateMachine.SetState(ShootingState.Charging);
+        _chargeController?.EnterCharge();
+        _previewShotScale = _chargeController != null ? _chargeController.PreviewShotScale : 0f;
     }
 
     private void ExitCharging()
     {
-        _state = ShootingState.Idle;
-        _chargeTime = 0f;
+        _stateMachine.SetState(ShootingState.Idle);
+        _chargeController?.ExitCharge();
     }
-
-    private void UpdateCharging()
-    {
-        var maxShotScaleBySize = GetMaxShotScaleBySize();
-        if (maxShotScaleBySize <= 0f)
-        {
-            TriggerFailure(ResultReason.NotEnoughSizeForShot);
-            return;
-        }
-
-        var nextShotScale = CalculateNextShotScale(maxShotScaleBySize);
-        _previewShotScale = nextShotScale;
-
-        if (ShouldAutoRelease(nextShotScale, maxShotScaleBySize))
-        {
-            ReleaseShot();
-            return;
-        }
-
-        var temporaryScale = Mathf.Max(_availableScale - GetShrinkAmount(_previewShotScale), _minPlayerScale);
-        SetBaseScaleSmoothed(temporaryScale);
-    }
-
-    private float CalculateNextShotScale(float maxShotScaleBySize)
-    {
-        var chargeRatio = Mathf.Clamp01(_chargeTime / tuning.maxChargeTime);
-        var nextShotScale = Mathf.Lerp(tuning.minProjectileScale, tuning.maxProjectileScale, chargeRatio);
-        return Mathf.Min(nextShotScale, maxShotScaleBySize);
-    }
-
-    private bool ShouldAutoRelease(float nextShotScale, float maxShotScaleBySize)
-    {
-        return _chargeTime >= tuning.maxChargeTime ||
-               Mathf.Abs(nextShotScale - maxShotScaleBySize) <= 0.0001f;
-    }
-
-#if UNITY_EDITOR
-    private void OnValidate()
-    {
-        if (playerCollider == null)
-            playerCollider = GetComponent<Collider>();
-        if (shootInput == null)
-            shootInput = GetComponent<PlayerShootInput>();
-        if (shootGate == null)
-            shootGate = GetComponent<PlayerShootGate>();
-        if (failWatcher == null)
-            failWatcher = GetComponent<PlayerFailWatcher>();
-        if (movement == null)
-            movement = GetComponent<PlayerMovement>();
-    }
-#endif
 }

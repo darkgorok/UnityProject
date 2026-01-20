@@ -19,6 +19,9 @@ GameObject:
   - component: {fileID: 3186630628846976589}
   - component: {fileID: 6217801253763520550}
   - component: {fileID: 795157888371795983}
+  - component: {fileID: 7745048056202690397}
+  - component: {fileID: 3878436196601598608}
+  - component: {fileID: 8902416456980812218}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -151,27 +154,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 74eb46b1c251ec142b1fac5599e7afa8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  projectilePrefab: {fileID: 7355334058794652161, guid: e4b48e6a9707b134eba453cff64ed5d2, type: 3}
-  config: {fileID: 11400000, guid: 65dba216115931041b65edd8b398cb1b, type: 2}
+  tuning: {fileID: 11400000, guid: 65dba216115931041b65edd8b398cb1b, type: 2}
   playerCollider: {fileID: 4396996879102660483}
   shootInput: {fileID: 1642681008533297884}
   shootGate: {fileID: 2275993795671014439}
   failWatcher: {fileID: 3186630628846976589}
   movement: {fileID: 6217801253763520550}
-  tuning:
-    minProjectileScale: 0.3
-    maxProjectileScale: 1.5
-    maxChargeTime: 1.5
-    projectileSpeed: 11
-    shrinkFactor: 0.7
-    infectionRadiusMultiplier: 0.8
-    minPlayerScaleRatio: 0.2
-    criticalPlayerScaleRatio: 0.18
-    chargeSquashScale: 0.85
-    chargeSquashDuration: 0.08
-    releaseExpandDuration: 0.06
-    chargeScaleSmoothTime: 0.08
-    cooldownDuration: 0.1
+  scaleController: {fileID: 8902416456980812218}
+  squashAnimator: {fileID: 3878436196601598608}
+  projectileSpawner: {fileID: 7745048056202690397}
 --- !u!114 &1642681008533297884
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -241,5 +232,43 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1f9d4b8d6bb5ee24abbb01d817925a4c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &7745048056202690397
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5029541251082019987}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8589603e06c2f614bb69f5bdbc67a21a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  projectilePrefab: {fileID: 7355334058794652161, guid: e4b48e6a9707b134eba453cff64ed5d2, type: 3}
+--- !u!114 &3878436196601598608
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5029541251082019987}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 98b69d37eb341274fabcd1ef8a8a7b63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  scaleController: {fileID: 8902416456980812218}
+--- !u!114 &8902416456980812218
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5029541251082019987}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7eb31643975daf8488daa3dd34a26263, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
