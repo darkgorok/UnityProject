@@ -15,6 +15,7 @@ public class PlayerShootInput : MonoBehaviour, ITickable
     [Inject] private PlayerShooting _shooting;
     [Inject(Optional = true)] private Camera _injectedCamera;
     [Inject(Optional = true)] private ITimeProvider _timeProvider;
+    [Inject(Optional = true)] private IInputService _inputService;
 
     private InputState _state = InputState.Idle;
 
@@ -32,8 +33,12 @@ public class PlayerShootInput : MonoBehaviour, ITickable
         if (_state == InputState.Charging && !_shooting.IsCharging)
             _state = InputState.Idle;
 
-        var pressed = Input.GetMouseButtonDown(0);
-        var released = Input.GetMouseButtonUp(0);
+        var pressed = _inputService != null
+            ? _inputService.GetMouseButtonDown(0)
+            : Input.GetMouseButtonDown(0);
+        var released = _inputService != null
+            ? _inputService.GetMouseButtonUp(0)
+            : Input.GetMouseButtonUp(0);
 
         switch (_state)
         {
