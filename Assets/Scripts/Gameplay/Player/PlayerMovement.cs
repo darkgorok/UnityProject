@@ -108,7 +108,7 @@ public class PlayerMovement : MonoBehaviour, ITickable
 
     private void TickMoving()
     {
-        if (goalTransform == null)
+        if (!HasGoal())
             return;
 
         if (!_inHop)
@@ -119,9 +119,7 @@ public class PlayerMovement : MonoBehaviour, ITickable
 
         _hopTimer += _timeProvider.DeltaTime;
         var t = Mathf.Clamp01(_hopTimer / Mathf.Max(0.01f, hopDuration));
-        var position = Vector3.Lerp(_hopStart, _hopEnd, t);
-        position.y = _baseY + Mathf.Sin(t * Mathf.PI) * jumpHeight;
-        transform.position = position;
+        UpdateHop(t);
 
         if (t >= 1f)
         {
@@ -173,13 +171,25 @@ public class PlayerMovement : MonoBehaviour, ITickable
 
     private void CheckGoalReached()
     {
-        if (goalTransform == null)
+        if (!HasGoal())
             return;
 
         var distance = Vector3.Distance(transform.position, goalTransform.position);
 
         if (distance <= doorReachDistance)
             ReachGoal();
+    }
+
+    private void UpdateHop(float t)
+    {
+        var position = Vector3.Lerp(_hopStart, _hopEnd, t);
+        position.y = _baseY + Mathf.Sin(t * Mathf.PI) * jumpHeight;
+        transform.position = position;
+    }
+
+    private bool HasGoal()
+    {
+        return goalTransform != null;
     }
 
     private void PlaySquashStretch()

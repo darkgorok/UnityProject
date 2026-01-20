@@ -129,15 +129,8 @@ public class PlayerShooting : MonoBehaviour, ITickable
 
     public void Tick()
     {
-        if (_state != ShootingState.Cooldown)
-            return;
-
-        _cooldownTimer -= _timeProvider.DeltaTime;
-        if (_cooldownTimer <= 0f)
-        {
-            _cooldownTimer = 0f;
-            _state = ShootingState.Idle;
-        }
+        if (_state == ShootingState.Cooldown)
+            TickCooldown();
     }
 
 
@@ -172,7 +165,7 @@ public class PlayerShooting : MonoBehaviour, ITickable
         _chargeTime += deltaTime;
         var chargeRatio = Mathf.Clamp01(_chargeTime / tuning.maxChargeTime);
         var nextShotScale = Mathf.Lerp(tuning.minProjectileScale, tuning.maxProjectileScale, chargeRatio);
-        var maxShotScaleBySize = Mathf.Max((_availableScale - _minPlayerScale) / tuning.shrinkFactor, 0f);
+        var maxShotScaleBySize = GetMaxShotScaleBySize();
 
         if (maxShotScaleBySize <= 0f)
         {
@@ -183,7 +176,7 @@ public class PlayerShooting : MonoBehaviour, ITickable
         nextShotScale = Mathf.Min(nextShotScale, maxShotScaleBySize);
         _previewShotScale = nextShotScale;
 
-        var shrinkAmount = _previewShotScale * tuning.shrinkFactor;
+        var shrinkAmount = GetShrinkAmount(_previewShotScale);
         var temporaryScale = Mathf.Max(_availableScale - shrinkAmount, _minPlayerScale);
 
         if (_chargeTime >= tuning.maxChargeTime ||
@@ -210,7 +203,7 @@ public class PlayerShooting : MonoBehaviour, ITickable
             return;
         }
 
-        var shrinkAmount = _previewShotScale * tuning.shrinkFactor;
+        var shrinkAmount = GetShrinkAmount(_previewShotScale);
         _availableScale = Mathf.Max(_availableScale - shrinkAmount, _minPlayerScale);
         SetBaseScaleImmediate(_availableScale);
         PlaySquash(1f, tuning.releaseExpandDuration);
@@ -330,6 +323,26 @@ public class PlayerShooting : MonoBehaviour, ITickable
         }
         ShotCompleted?.Invoke();
         TryResolvePendingFail();
+    }
+
+    private void TickCooldown()
+    {
+        _cooldownTimer -= _timeProvider.DeltaTime;
+        if (_cooldownTimer <= 0f)
+        {
+            _cooldownTimer = 0f;
+            _state = ShootingState.Idle;
+        }
+    }
+
+    private float GetMaxShotScaleBySize()
+    {
+        return Mathf.Max((_availableScale - _minPlayerScale) / tuning.shrinkFactor, 0f);
+    }
+
+    private float GetShrinkAmount(float shotScale)
+    {
+        return shotScale * tuning.shrinkFactor;
     }
 
     private void OnDestroy()

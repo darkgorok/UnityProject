@@ -25,7 +25,7 @@ public sealed class ObstacleRegistryService : IObstacleRegistry, IObstacleResolv
 
     public void Register(IObstacle obstacle)
     {
-        if (obstacle == null)
+        if (!IsValidObstacle(obstacle))
             return;
 
         if (_obstacles.Add(obstacle))
@@ -34,7 +34,7 @@ public sealed class ObstacleRegistryService : IObstacleRegistry, IObstacleResolv
 
     public void NotifyObstacleCleared(IObstacle obstacle)
     {
-        if (obstacle == null)
+        if (!IsValidObstacle(obstacle))
             return;
 
         if (_obstacles.Remove(obstacle))
@@ -51,7 +51,7 @@ public sealed class ObstacleRegistryService : IObstacleRegistry, IObstacleResolv
 
     public void Register(Collider collider, IObstacle obstacle)
     {
-        if (collider == null || obstacle == null)
+        if (!IsValidCollider(collider) || !IsValidObstacle(obstacle))
             return;
 
         _lookup[collider] = obstacle;
@@ -59,7 +59,7 @@ public sealed class ObstacleRegistryService : IObstacleRegistry, IObstacleResolv
 
     public void Unregister(Collider collider)
     {
-        if (collider == null)
+        if (!IsValidCollider(collider))
             return;
 
         _lookup.Remove(collider);
@@ -67,12 +67,22 @@ public sealed class ObstacleRegistryService : IObstacleRegistry, IObstacleResolv
 
     public bool TryGetObstacle(Collider collider, out IObstacle obstacle)
     {
-        if (collider == null)
+        if (!IsValidCollider(collider))
         {
             obstacle = null;
             return false;
         }
 
         return _lookup.TryGetValue(collider, out obstacle);
+    }
+
+    private static bool IsValidObstacle(IObstacle obstacle)
+    {
+        return obstacle != null;
+    }
+
+    private static bool IsValidCollider(Collider collider)
+    {
+        return collider != null;
     }
 }
