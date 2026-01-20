@@ -4,19 +4,7 @@ using Zenject;
 public class PlayerShootGate : MonoBehaviour
 {
     [Inject] private PlayerShooting _shooting;
-    [Inject] private IObstacleRegistry _levelManager;
     [Inject(Optional = true)] private Zenject.SignalBus _signalBus;
-
-    private void Start()
-    {
-        if (_levelManager == null)
-            return;
-
-    }
-
-    private void OnDestroy()
-    {
-    }
 
     private void OnEnable()
     {

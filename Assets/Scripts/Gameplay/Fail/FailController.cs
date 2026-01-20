@@ -21,12 +21,10 @@ public class FailController : IFailController
 
         if (_gameFlow != null)
         {
-            Debug.Log($"[FailController] TryFail -> GameFlow.SetLose({detail ?? reason.ToString()})");
             _gameFlow.SetLose(detail ?? reason.ToString());
         }
         else
         {
-            Debug.Log($"[FailController] TryFail -> fire LoseSignal: {reason} {detail}");
             _signalBus.Fire(new LoseSignal(reason, detail));
         }
     }

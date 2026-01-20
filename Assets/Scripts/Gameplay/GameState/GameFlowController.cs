@@ -49,7 +49,6 @@ public class GameFlowController : IGameFlowController, IInitializable, IDisposab
 
         _stateModel.SetWin();
         StateChanged?.Invoke(_stateModel.State);
-        Debug.Log("[GameFlow] SetWin -> fire WinSignal");
         _signalBus.Fire(new WinSignal());
     }
 
@@ -60,7 +59,6 @@ public class GameFlowController : IGameFlowController, IInitializable, IDisposab
 
         _stateModel.SetLose(reason);
         StateChanged?.Invoke(_stateModel.State);
-        Debug.Log($"[GameFlow] SetLose({reason}) -> fire LoseSignal");
         _signalBus.Fire(new LoseSignal(ResultReason.Unknown, reason));
     }
 

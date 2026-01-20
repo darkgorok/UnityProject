@@ -1,10 +1,11 @@
-using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 using UnityEngine;
+using UnityEngine.UI;
+using Zenject;
 
 public class WinScreenView : ResultScreenView
 {
     [SerializeField] private Button continueButton;
+    [Inject(Optional = true)] private ILevelReloader _reloader;
 
     private void OnEnable()
     {
@@ -18,8 +19,8 @@ public class WinScreenView : ResultScreenView
             continueButton.onClick.RemoveListener(ReloadLevel);
     }
 
-    private static void ReloadLevel()
+    private void ReloadLevel()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        _reloader?.ReloadCurrent();
     }
 }

@@ -31,6 +31,7 @@ public class GameSceneInstaller : MonoInstaller
         Container.BindInterfacesAndSelfTo<GameFlowController>().AsSingle().NonLazy().IfNotBound();
         Container.Bind<IDoor>().To<DoorModel>().AsSingle().IfNotBound();
         Container.Bind<ITimeProvider>().To<UnityTimeProvider>().AsSingle().IfNotBound();
+        Container.Bind<ILevelReloader>().To<SceneLevelReloader>().AsSingle().IfNotBound();
 #if UNITY_EDITOR
         Container.Bind<IInputService>().To<EditorInputService>().AsSingle().IfNotBound();
 #elif UNITY_IOS || UNITY_ANDROID

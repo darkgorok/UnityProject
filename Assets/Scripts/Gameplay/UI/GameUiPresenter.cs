@@ -27,7 +27,6 @@ public sealed class GameUiPresenter : IInitializable, IDisposable, ITickable
 
     public void Initialize()
     {
-        Debug.Log("[GameUiPresenter] Initialize");
         _resultShown = false;
         TryAttachToUiRoot(_winScreen);
         TryAttachToUiRoot(_loseScreen);
@@ -88,13 +87,11 @@ public sealed class GameUiPresenter : IInitializable, IDisposable, ITickable
 
     private void HandleWinSignal()
     {
-        Debug.Log("[GameUiPresenter] WinSignal received");
         ShowWin();
     }
 
     private void HandleLoseSignal(LoseSignal signal)
     {
-        Debug.Log($"[GameUiPresenter] LoseSignal received: {signal.Reason} {signal.Detail}");
         ShowLose();
     }
 
@@ -104,7 +101,6 @@ public sealed class GameUiPresenter : IInitializable, IDisposable, ITickable
             return;
 
         _resultShown = true;
-        Debug.Log("[GameUiPresenter] ShowWin");
         _winScreen?.Show();
     }
 
@@ -114,7 +110,6 @@ public sealed class GameUiPresenter : IInitializable, IDisposable, ITickable
             return;
 
         _resultShown = true;
-        Debug.Log("[GameUiPresenter] ShowLose");
         _loseScreen?.Show();
     }
 

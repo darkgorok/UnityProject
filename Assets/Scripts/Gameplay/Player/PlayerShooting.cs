@@ -4,6 +4,7 @@ using Zenject;
 using DG.Tweening;
 
 [RequireComponent(typeof(Collider))]
+[RequireComponent(typeof(PlayerMarker))]
 public class PlayerShooting : MonoBehaviour, ITickable
 {
     private enum ShootingState

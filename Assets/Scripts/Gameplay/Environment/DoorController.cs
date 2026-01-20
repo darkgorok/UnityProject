@@ -87,8 +87,8 @@ public class DoorController : MonoBehaviour
 
     private static bool IsPlayerTrigger(Collider other)
     {
-        return other.TryGetComponent<PlayerShooting>(out _)
-            || other.GetComponentInParent<PlayerShooting>() != null;
+        return other.TryGetComponent<PlayerMarker>(out _)
+            || other.GetComponentInParent<PlayerMarker>() != null;
     }
 
     private void ApplyConfig()

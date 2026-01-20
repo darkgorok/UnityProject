@@ -9,19 +9,11 @@ public class PlayerShootInput : MonoBehaviour, ITickable
         Charging
     }
 
-    [SerializeField] private Camera inputCamera;
     [Inject] private PlayerShooting _shooting;
-    [Inject(Optional = true)] private Camera _injectedCamera;
     [Inject(Optional = true)] private ITimeProvider _timeProvider;
     [Inject(Optional = true)] private IInputService _inputService;
 
     private InputState _state = InputState.Idle;
-
-    private void Awake()
-    {
-        if (inputCamera == null)
-            inputCamera = _injectedCamera;
-    }
 
     public void Tick()
     {
@@ -60,8 +52,4 @@ public class PlayerShootInput : MonoBehaviour, ITickable
         }
     }
 
-    private bool IsPointerOverPlayer()
-    {
-        return true;
-    }
 }

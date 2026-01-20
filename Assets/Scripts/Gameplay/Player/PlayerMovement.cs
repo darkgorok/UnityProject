@@ -1,10 +1,15 @@
-using System;
 using UnityEngine;
 using Zenject;
 using DG.Tweening;
 
 public class PlayerMovement : MonoBehaviour, ITickable
 {
+    private enum MovementState
+    {
+        Idle,
+        Moving,
+        Reached
+    }
     [Header("References")]
     [SerializeField] private Transform goalTransform;
     [SerializeField] private PlayerMovementConfig config;
@@ -28,7 +33,6 @@ public class PlayerMovement : MonoBehaviour, ITickable
     [Inject(Optional = true)] private ITimeProvider _timeProvider;
     [Inject(Optional = true)] private PlayerShooting _shooting;
 
-    private bool _moving;
     private bool _inHop;
     private float _hopTimer;
     private Vector3 _hopStart;
@@ -36,6 +40,7 @@ public class PlayerMovement : MonoBehaviour, ITickable
     private float _baseY;
     private Vector3 _defaultScale;
     private Sequence _squashSequence;
+    private MovementState _state = MovementState.Idle;
 
     private void Awake()
     {
@@ -71,10 +76,10 @@ public class PlayerMovement : MonoBehaviour, ITickable
         if (_gameFlow != null && _gameFlow.State != GameFlowState.Play)
             return;
 
-        if (!_moving && _levelManager != null && _levelManager.IsPathCleared)
+        if (_state == MovementState.Idle && _levelManager != null && _levelManager.IsPathCleared)
             StartMoving();
 
-        if (!_moving)
+        if (_state != MovementState.Moving)
             return;
 
         if (goalTransform == null)
@@ -103,7 +108,7 @@ public class PlayerMovement : MonoBehaviour, ITickable
 
     private void StartMoving()
     {
-        _moving = true;
+        _state = MovementState.Moving;
         _inHop = false;
         _defaultScale = transform.localScale;
         _shooting?.SetShootingEnabled(false);
@@ -111,27 +116,24 @@ public class PlayerMovement : MonoBehaviour, ITickable
 
     private void ReachGoal()
     {
-        if (!_moving)
+        if (_state != MovementState.Moving)
             return;
 
-        _moving = false;
+        _state = MovementState.Reached;
         if (_gameFlow != null)
         {
-            Debug.Log("[PlayerMovement] ReachGoal -> SetWin()", this);
-            Debug.Log("[PlayerMovement] ReachGoal -> GameFlow.SetWin()");
             _gameFlow.SetWin();
         }
         else
         {
-            Debug.Log("[PlayerMovement] ReachGoal -> fire WinSignal", this);
-            Debug.Log("[PlayerMovement] ReachGoal -> fire WinSignal");
             _signalBus?.Fire(new WinSignal());
         }
     }
 
     private void OnPathCleared()
     {
-        StartMoving();
+        if (_state == MovementState.Idle)
+            StartMoving();
     }
 
     private void StartNextHop()
@@ -165,13 +167,9 @@ public class PlayerMovement : MonoBehaviour, ITickable
             return;
 
         var distance = Vector3.Distance(transform.position, goalTransform.position);
-        Debug.Log($"[PlayerMovement] CheckGoalReached -> distance {distance:F2}", this);
 
         if (distance <= doorReachDistance)
-        {
-            Debug.Log("[PlayerMovement] CheckGoalReached -> within reach, win", this);
             ReachGoal();
-        }
     }
 
     private void PlaySquashStretch()
