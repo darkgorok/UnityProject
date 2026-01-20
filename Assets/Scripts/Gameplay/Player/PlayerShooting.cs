@@ -69,10 +69,6 @@ public class PlayerShooting : MonoBehaviour, IPlayerShooting
 
     private void Awake()
     {
-        playerCollider = GetComponent<Collider>();
-        scaleController = GetComponent<PlayerScaleController>();
-        squashAnimator = GetComponent<PlayerSquashAnimator>();
-        projectileSpawner = GetComponent<PlayerProjectileSpawner>();
         _calculator = new ShotCalculator(tuning);
         _chargeController = new PlayerChargeController(tuning, _calculator, scaleController, squashAnimator);
 

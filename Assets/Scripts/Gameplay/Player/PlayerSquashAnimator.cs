@@ -8,7 +8,6 @@ public class PlayerSquashAnimator : MonoBehaviour
 
     private void Awake()
     {
-        scaleController = GetComponent<PlayerScaleController>();
         _squashTween = DOTween.Sequence();
         _squashTween.Pause();
     }
