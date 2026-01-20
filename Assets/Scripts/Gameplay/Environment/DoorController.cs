@@ -1,23 +1,35 @@
 using UnityEngine;
 using Zenject;
+using DG.Tweening;
 
 [RequireComponent(typeof(Collider), typeof(Rigidbody))]
 public class DoorController : MonoBehaviour
 {
-    [SerializeField] private Transform playerTransform;
     [SerializeField] private float openDistance = 5f;
+    [SerializeField] private float openAngle = 90f;
+    [SerializeField] private float openDuration = 0.5f;
+    [SerializeField] private Ease openEase = Ease.OutQuad;
+    [SerializeField] private Transform doorPivot;
     [SerializeField] private Collider triggerCollider;
     [SerializeField] private Rigidbody doorRigidbody;
     [SerializeField] private DoorConfig config;
 
     [Inject] private IDoor _door;
-    [Inject(Optional = true, Id = "Player")] private Transform _injectedPlayer;
+    private Quaternion _closedRotation;
+    private Tween _openTween;
 
     private void Awake()
     {
         ApplyConfig();
-        if (playerTransform == null)
-            playerTransform = _injectedPlayer;
+        if (triggerCollider == null)
+            triggerCollider = GetComponentInChildren<Collider>();
+        if (doorRigidbody == null)
+            doorRigidbody = GetComponent<Rigidbody>();
+
+        if (doorPivot == null)
+            doorPivot = transform;
+
+        _closedRotation = doorPivot.localRotation;
 
         if (triggerCollider != null)
         {
@@ -32,18 +44,51 @@ public class DoorController : MonoBehaviour
         }
     }
 
+    private void OnEnable()
+    {
+        if (_door != null)
+        {
+            _door.Opened += HandleDoorOpened;
+            if (_door.IsOpen)
+                HandleDoorOpened();
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (_door != null)
+            _door.Opened -= HandleDoorOpened;
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         if (_door.IsOpen)
             return;
 
-        var isPlayer = playerTransform != null
-            ? other.transform == playerTransform
-            : other.CompareTag("Player");
-        if (!isPlayer)
+        if (!IsPlayerTrigger(other))
             return;
 
         _door.Open();
+    }
+
+    private void HandleDoorOpened()
+    {
+        if (doorPivot == null)
+            return;
+
+        if (_openTween != null)
+            _openTween.Kill();
+
+        var targetRotation = _closedRotation * Quaternion.Euler(0f, openAngle, 0f);
+        _openTween = doorPivot.DOLocalRotateQuaternion(targetRotation, openDuration)
+            .SetEase(openEase)
+            .SetLink(doorPivot.gameObject, LinkBehaviour.KillOnDisable);
+    }
+
+    private static bool IsPlayerTrigger(Collider other)
+    {
+        return other.TryGetComponent<PlayerShooting>(out _)
+            || other.GetComponentInParent<PlayerShooting>() != null;
     }
 
     private void ApplyConfig()
@@ -58,7 +103,7 @@ public class DoorController : MonoBehaviour
     private void OnValidate()
     {
         if (triggerCollider == null)
-            triggerCollider = GetComponent<Collider>();
+            triggerCollider = GetComponentInChildren<Collider>();
         if (doorRigidbody == null)
             doorRigidbody = GetComponent<Rigidbody>();
     }
