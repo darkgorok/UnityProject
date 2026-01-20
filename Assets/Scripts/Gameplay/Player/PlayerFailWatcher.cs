@@ -6,15 +6,14 @@ public class PlayerFailWatcher : MonoBehaviour
     [Inject] private PlayerShooting _shooting;
     [Inject] private IObstacleRegistry _levelManager;
     [Inject(Optional = true)] private IFailController _failController;
-    [Inject(Optional = true)] private SignalBus _signalBus;
     private bool _waitingForShotCompletion;
 
     private void OnEnable()
     {
-        if (_signalBus != null)
+        if (_shooting != null)
         {
-            _signalBus.Subscribe<ShotReleasedSignal>(HandleShotReleased);
-            _signalBus.Subscribe<ShotCompletedSignal>(HandleShotCompleted);
+            _shooting.ShotReleased += HandleShotReleased;
+            _shooting.ShotCompleted += HandleShotCompleted;
         }
 
         EvaluatePathClearance();
@@ -22,14 +21,14 @@ public class PlayerFailWatcher : MonoBehaviour
 
     private void OnDisable()
     {
-        if (_signalBus != null)
+        if (_shooting != null)
         {
-            _signalBus.TryUnsubscribe<ShotReleasedSignal>(HandleShotReleased);
-            _signalBus.TryUnsubscribe<ShotCompletedSignal>(HandleShotCompleted);
+            _shooting.ShotReleased -= HandleShotReleased;
+            _shooting.ShotCompleted -= HandleShotCompleted;
         }
     }
 
-    private void HandleShotReleased()
+    private void HandleShotReleased(float shotScale)
     {
         if (_shooting == null)
             return;

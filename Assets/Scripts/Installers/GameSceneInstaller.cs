@@ -18,11 +18,7 @@ public class GameSceneInstaller : MonoInstaller
 
     public override void InstallBindings()
     {
-        SignalBusInstaller.Install(Container);
-        Container.DeclareSignal<GameStartSignal>().OptionalSubscriber();
-        Container.DeclareSignal<PathClearedSignal>();
-        Container.DeclareSignal<ShotReleasedSignal>().OptionalSubscriber();
-        Container.DeclareSignal<ShotCompletedSignal>().OptionalSubscriber();
+        // No global signals used.
 
         Container.Bind<GameFlowModel>().AsSingle().IfNotBound();
         Container.Bind<IFailController>().To<FailController>().AsSingle().IfNotBound();

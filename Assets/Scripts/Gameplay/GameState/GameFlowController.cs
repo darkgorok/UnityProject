@@ -1,31 +1,18 @@
 using System;
-using Zenject;
 
-public class GameFlowController : IGameFlowController, IInitializable, IDisposable
+public class GameFlowController : IGameFlowController
 {
     public event Action<GameFlowState> StateChanged;
 
     public GameFlowState State => _stateModel.State;
     public string LastLoseReason => _stateModel.LastLoseReason;
 
-    private readonly SignalBus _signalBus;
     private readonly GameFlowModel _stateModel;
 
-    public GameFlowController(SignalBus signalBus, GameFlowModel stateModel)
+    public GameFlowController(GameFlowModel stateModel)
     {
-        _signalBus = signalBus;
         _stateModel = stateModel;
         BeginPlay();
-    }
-
-    public void Initialize()
-    {
-        _signalBus.Subscribe<GameStartSignal>(HandleGameStart);
-    }
-
-    public void Dispose()
-    {
-        _signalBus.TryUnsubscribe<GameStartSignal>(HandleGameStart);
     }
 
     public void BeginPlay()
@@ -55,8 +42,4 @@ public class GameFlowController : IGameFlowController, IInitializable, IDisposab
         StateChanged?.Invoke(_stateModel.State);
     }
 
-    private void HandleGameStart()
-    {
-        BeginPlay();
-    }
 }

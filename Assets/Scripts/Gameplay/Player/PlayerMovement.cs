@@ -29,8 +29,7 @@ public class PlayerMovement : MonoBehaviour, ITickable
     [Inject(Optional = true)] private IDoor _door;
     [Inject(Optional = true, Id = "Goal")] private Transform _injectedGoal;
     [Inject(Optional = true)] private IGameFlowController _gameFlow;
-    [Inject(Optional = true)] private Zenject.SignalBus _signalBus;
-    [Inject(Optional = true)] private ITimeProvider _timeProvider;
+    [Inject] private ITimeProvider _timeProvider;
     [Inject(Optional = true)] private PlayerShooting _shooting;
 
     private bool _inHop;
@@ -59,16 +58,16 @@ public class PlayerMovement : MonoBehaviour, ITickable
 
     private void OnEnable()
     {
-        if (_signalBus != null)
-            _signalBus.Subscribe<PathClearedSignal>(OnPathCleared);
+        if (_levelManager != null)
+            _levelManager.PathCleared += OnPathCleared;
         if (_levelManager != null && _levelManager.IsPathCleared)
             StartMoving();
     }
 
     private void OnDisable()
     {
-        if (_signalBus != null)
-            _signalBus.TryUnsubscribe<PathClearedSignal>(OnPathCleared);
+        if (_levelManager != null)
+            _levelManager.PathCleared -= OnPathCleared;
     }
 
     public void Tick()
@@ -118,7 +117,7 @@ public class PlayerMovement : MonoBehaviour, ITickable
             return;
         }
 
-        _hopTimer += _timeProvider != null ? _timeProvider.DeltaTime : Time.deltaTime;
+        _hopTimer += _timeProvider.DeltaTime;
         var t = Mathf.Clamp01(_hopTimer / Mathf.Max(0.01f, hopDuration));
         var position = Vector3.Lerp(_hopStart, _hopEnd, t);
         position.y = _baseY + Mathf.Sin(t * Mathf.PI) * jumpHeight;

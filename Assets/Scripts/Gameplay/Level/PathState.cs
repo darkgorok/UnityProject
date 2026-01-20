@@ -24,4 +24,11 @@ public sealed class PathState
         if (IsCleared)
             Cleared?.Invoke();
     }
+
+    public void MarkCleared()
+    {
+        _hasRegisteredObstacles = true;
+        _activeObstacleCount = 0;
+        Cleared?.Invoke();
+    }
 }

@@ -21,23 +21,23 @@ public class DoorController : MonoBehaviour
     private void Awake()
     {
         ApplyConfig();
-        if (triggerCollider == null)
-            triggerCollider = GetComponentInChildren<Collider>();
-        if (doorRigidbody == null)
-            doorRigidbody = GetComponent<Rigidbody>();
-
         if (doorPivot == null)
             doorPivot = transform;
 
         _closedRotation = doorPivot.localRotation;
 
-        if (triggerCollider != null)
+        if (triggerCollider == null)
+            Debug.LogError("DoorController: triggerCollider is not assigned.", this);
+        else
         {
             triggerCollider.isTrigger = true;
             if (triggerCollider is SphereCollider sphereCollider)
                 sphereCollider.radius = openDistance;
         }
-        if (doorRigidbody != null)
+
+        if (doorRigidbody == null)
+            Debug.LogError("DoorController: doorRigidbody is not assigned.", this);
+        else
         {
             doorRigidbody.isKinematic = true;
             doorRigidbody.useGravity = false;
@@ -85,7 +85,7 @@ public class DoorController : MonoBehaviour
             .SetLink(doorPivot.gameObject, LinkBehaviour.KillOnDisable);
     }
 
-    private static bool IsPlayerTrigger(Collider other)
+    private bool IsPlayerTrigger(Collider other)
     {
         return other.TryGetComponent<PlayerMarker>(out _)
             || other.GetComponentInParent<PlayerMarker>() != null;
@@ -97,6 +97,9 @@ public class DoorController : MonoBehaviour
             return;
 
         openDistance = config.openDistance;
+        openAngle = config.openAngle;
+        openDuration = config.openDuration;
+        openEase = config.openEase;
     }
 
 #if UNITY_EDITOR

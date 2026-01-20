@@ -17,6 +17,11 @@ public sealed class ObstacleRegistryService : IObstacleRegistry, IObstacleResolv
     public bool IsPathCleared => _pathState.IsCleared || (!_pathState.HasRegisteredObstacles && _allowEmptyPathStart);
     public bool HasRegisteredObstacles => _pathState.HasRegisteredObstacles;
     public bool AllowEmptyPathStart => _allowEmptyPathStart;
+    public event System.Action PathCleared
+    {
+        add => _pathState.Cleared += value;
+        remove => _pathState.Cleared -= value;
+    }
 
     public void Register(IObstacle obstacle)
     {
@@ -34,6 +39,14 @@ public sealed class ObstacleRegistryService : IObstacleRegistry, IObstacleResolv
 
         if (_obstacles.Remove(obstacle))
             _pathState.NotifyObstacleCleared();
+    }
+
+    public void MarkPathCleared()
+    {
+        if (_pathState.IsCleared)
+            return;
+
+        _pathState.MarkCleared();
     }
 
     public void Register(Collider collider, IObstacle obstacle)

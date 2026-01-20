@@ -4,18 +4,18 @@ using Zenject;
 public class PlayerShootGate : MonoBehaviour
 {
     [Inject] private PlayerShooting _shooting;
-    [Inject(Optional = true)] private Zenject.SignalBus _signalBus;
+    [Inject] private IObstacleRegistry _levelManager;
 
     private void OnEnable()
     {
-        if (_signalBus != null)
-            _signalBus.Subscribe<PathClearedSignal>(DisableShooting);
+        if (_levelManager != null)
+            _levelManager.PathCleared += DisableShooting;
     }
 
     private void OnDisable()
     {
-        if (_signalBus != null)
-            _signalBus.TryUnsubscribe<PathClearedSignal>(DisableShooting);
+        if (_levelManager != null)
+            _levelManager.PathCleared -= DisableShooting;
     }
 
     private void DisableShooting()
