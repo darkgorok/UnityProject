@@ -4,7 +4,7 @@ using UnityEngine;
 public class PlayerMovementConfig : ScriptableObject
 {
     public float moveSpeed = 4f;
-    public float doorReachDistance = 1f;
+    public float doorReachDistance = 1.5f;
     public float jumpHeight = 0.6f;
     public float hopDuration = 0.4f;
     public float squashScaleY = 0.75f;

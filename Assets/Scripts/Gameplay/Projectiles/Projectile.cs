@@ -35,6 +35,7 @@ public class Projectile : MonoBehaviour, IProjectile
     [SerializeField] private ProjectileConfig config;
 
     private IProjectileVfx _infectionVfx;
+    private float _lastInfectionRadius;
     [Zenject.Inject(Optional = true)] private IObstacleResolver _obstacleResolver;
 
     public event Action Completed;
@@ -57,6 +58,7 @@ public class Projectile : MonoBehaviour, IProjectile
         _hasExploded = false;
         transform.localScale = Vector3.one * size;
         _infectionRadius = infectionRadius;
+        _lastInfectionRadius = infectionRadius;
 
         projectileRigidbody.useGravity = false;
         projectileRigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
@@ -119,6 +121,17 @@ public class Projectile : MonoBehaviour, IProjectile
 
         ReleaseSelf();
     }
+
+#if UNITY_EDITOR
+    private void OnDrawGizmosSelected()
+    {
+        if (_lastInfectionRadius <= 0f)
+            return;
+
+        Gizmos.color = new Color(0.2f, 0.9f, 0.2f, 0.8f);
+        Gizmos.DrawWireSphere(transform.position, _lastInfectionRadius);
+    }
+#endif
 
     public void ResetState()
     {

@@ -18,4 +18,4 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   infectionVfxDuration: 0.25
-  infectionVfxScaleMultiplier: 2
+  infectionVfxScaleMultiplier: 0.2

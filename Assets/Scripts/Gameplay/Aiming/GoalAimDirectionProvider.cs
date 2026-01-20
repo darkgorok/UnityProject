@@ -10,6 +10,7 @@ public class GoalAimDirectionProvider : MonoBehaviour, IAimDirectionProvider
             return transform.forward;
 
         var direction = target.position - origin;
+        direction.y = 0f;
         return direction.sqrMagnitude > 0.001f ? direction.normalized : transform.forward;
     }
 }

@@ -11,7 +11,7 @@ public class PlayerMovement : MonoBehaviour, ITickable
 
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 4f;
-    [SerializeField] private float doorReachDistance = 1f;
+    [SerializeField] private float doorReachDistance = 1.5f;
     [SerializeField] private float jumpHeight = 0.6f;
     [SerializeField] private float hopDuration = 0.4f;
     [Header("Jump Squash")]
@@ -117,11 +117,13 @@ public class PlayerMovement : MonoBehaviour, ITickable
         _moving = false;
         if (_gameFlow != null)
         {
+            Debug.Log("[PlayerMovement] ReachGoal -> SetWin()", this);
             Debug.Log("[PlayerMovement] ReachGoal -> GameFlow.SetWin()");
             _gameFlow.SetWin();
         }
         else
         {
+            Debug.Log("[PlayerMovement] ReachGoal -> fire WinSignal", this);
             Debug.Log("[PlayerMovement] ReachGoal -> fire WinSignal");
             _signalBus?.Fire(new WinSignal());
         }
@@ -162,11 +164,14 @@ public class PlayerMovement : MonoBehaviour, ITickable
         if (goalTransform == null)
             return;
 
-        if (_door != null && !_door.IsOpen)
-            return;
+        var distance = Vector3.Distance(transform.position, goalTransform.position);
+        Debug.Log($"[PlayerMovement] CheckGoalReached -> distance {distance:F2}", this);
 
-        if (Vector3.Distance(transform.position, goalTransform.position) <= doorReachDistance)
+        if (distance <= doorReachDistance)
+        {
+            Debug.Log("[PlayerMovement] CheckGoalReached -> within reach, win", this);
             ReachGoal();
+        }
     }
 
     private void PlaySquashStretch()
