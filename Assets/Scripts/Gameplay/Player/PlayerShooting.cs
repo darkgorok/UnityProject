@@ -34,7 +34,7 @@ public class PlayerShooting : MonoBehaviour, ITickable
     }
 
     [Header("References")]
-    [SerializeField] private ProjectileFactory projectileFactory;
+    [SerializeField] private Projectile projectilePrefab;
     [SerializeField] private PlayerShootingConfig config;
     [SerializeField] private Collider playerCollider;
     [SerializeField] private PlayerShootInput shootInput;
@@ -72,7 +72,6 @@ public class PlayerShooting : MonoBehaviour, ITickable
     public PlayerShootGate ShootGate => shootGate;
     public PlayerFailWatcher FailWatcher => failWatcher;
     public PlayerMovement Movement => movement;
-    public ProjectileFactory ProjectileFactoryComponent => projectileFactory;
 
     private float _initialScale;
     private float _availableScale;
@@ -86,11 +85,12 @@ public class PlayerShooting : MonoBehaviour, ITickable
     private bool _pendingOverchargeFail;
     private float _cooldownTimer;
     [Inject(Optional = true)] private IAimDirectionProvider _aimProvider;
-    [Inject] private IProjectileFactory _projectileFactory;
     [Inject(Optional = true)] private IGameFlowController _gameFlow;
     [Inject(Optional = true)] private IFailController _failController;
     [Inject(Optional = true)] private IObstacleRegistry _levelManager;
     [Inject] private ITimeProvider _timeProvider;
+    [Inject(Optional = true)] private Projectile.Pool _projectilePool;
+    [Inject(Optional = true)] private DiContainer _container;
     private float _baseScale;
     private float _currentBaseScale;
     private float _scaleVelocity;
@@ -111,6 +111,11 @@ public class PlayerShooting : MonoBehaviour, ITickable
         _baseScale = _availableScale;
         _currentBaseScale = _baseScale;
         ApplyScale();
+    }
+
+    private void Start()
+    {
+        ValidateReferences();
     }
 
     private void OnEnable()
@@ -244,13 +249,16 @@ public class PlayerShooting : MonoBehaviour, ITickable
         var spawnPosition = transform.position;
         Projectile projectileComponent = null;
 
-        if (_projectileFactory != null)
+        if (_projectilePool != null)
         {
-            projectileComponent = _projectileFactory.Create(spawnPosition, Quaternion.identity);
+            projectileComponent = _projectilePool.Spawn();
+            projectileComponent.transform.SetPositionAndRotation(spawnPosition, Quaternion.identity);
         }
-        else if (projectileFactory != null)
+        else if (projectilePrefab != null)
         {
-            projectileComponent = projectileFactory.Create(spawnPosition, Quaternion.identity);
+            projectileComponent = Instantiate(projectilePrefab);
+            _container?.InjectGameObject(projectileComponent.gameObject);
+            projectileComponent.transform.SetPositionAndRotation(spawnPosition, Quaternion.identity);
         }
 
         if (projectileComponent == null)
@@ -438,6 +446,22 @@ public class PlayerShooting : MonoBehaviour, ITickable
         tuning.cooldownDuration = config.cooldownDuration;
     }
 
+    private void ValidateReferences()
+    {
+        if (_projectilePool == null && projectilePrefab == null)
+            Debug.LogError("PlayerShooting: projectilePrefab is not assigned and no pool is bound.", this);
+        if (playerCollider == null)
+            Debug.LogError("PlayerShooting: playerCollider is not assigned.", this);
+        if (shootInput == null)
+            Debug.LogError("PlayerShooting: shootInput is not assigned.", this);
+        if (shootGate == null)
+            Debug.LogError("PlayerShooting: shootGate is not assigned.", this);
+        if (failWatcher == null)
+            Debug.LogError("PlayerShooting: failWatcher is not assigned.", this);
+        if (movement == null)
+            Debug.LogError("PlayerShooting: movement is not assigned.", this);
+    }
+
     private void EnterCharging()
     {
         _state = ShootingState.Charging;
@@ -492,8 +516,6 @@ public class PlayerShooting : MonoBehaviour, ITickable
     {
         if (playerCollider == null)
             playerCollider = GetComponent<Collider>();
-        if (projectileFactory == null)
-            projectileFactory = GetComponent<ProjectileFactory>();
         if (shootInput == null)
             shootInput = GetComponent<PlayerShootInput>();
         if (shootGate == null)

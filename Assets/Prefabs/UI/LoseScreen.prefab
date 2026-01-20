@@ -313,7 +313,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   root: {fileID: 0}
-  retryButton: {fileID: 6904724561534903826}
+  actionButton: {fileID: 6904724561534903826}
 --- !u!1 &8222054425405107376
 GameObject:
   m_ObjectHideFlags: 0

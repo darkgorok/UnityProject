@@ -98,16 +98,11 @@ public static class GameplayPrefabBuilder
         rigidbody.useGravity = false;
         rigidbody.isKinematic = true;
 
-        var factory = root.AddComponent<ProjectileFactory>();
-        if (projectilePrefab != null)
-        {
-            var factorySerialized = new SerializedObject(factory);
-            factorySerialized.FindProperty("projectilePrefab").objectReferenceValue = projectilePrefab.GetComponent<Projectile>();
-            factorySerialized.ApplyModifiedPropertiesWithoutUndo();
-        }
         var shooting = root.AddComponent<PlayerShooting>();
         var shootingSerialized = new SerializedObject(shooting);
-        shootingSerialized.FindProperty("projectileFactory").objectReferenceValue = factory;
+        shootingSerialized.FindProperty("projectilePrefab").objectReferenceValue = projectilePrefab != null
+            ? projectilePrefab.GetComponent<Projectile>()
+            : null;
         shootingSerialized.ApplyModifiedPropertiesWithoutUndo();
 
         root.AddComponent<PlayerShootInput>();

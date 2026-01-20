@@ -76,9 +76,6 @@ public class GameSceneInstaller : MonoInstaller
                 .FromResolveGetter<PlayerShooting>(shooting => shooting.transform)
                 .AsCached()
                 .IfNotBound();
-            Container.Bind<IProjectileFactory>()
-                .FromResolveGetter<PlayerShooting>(shooting => shooting.ProjectileFactoryComponent)
-                .AsSingle();
             Container.BindInterfacesAndSelfTo<PlayerShootInput>()
                 .FromResolveGetter<PlayerShooting, PlayerShootInput>(shooting => shooting.ShootInput)
                 .AsSingle()
@@ -101,9 +98,6 @@ public class GameSceneInstaller : MonoInstaller
                 .FromResolveGetter<PlayerShooting>(shooting => shooting.transform)
                 .AsCached()
                 .IfNotBound();
-            Container.Bind<IProjectileFactory>()
-                .FromResolveGetter<PlayerShooting>(shooting => shooting.GetComponent<ProjectileFactory>())
-                .AsSingle();
             Container.BindInterfacesAndSelfTo<PlayerShootInput>().FromComponentInHierarchy().AsSingle().NonLazy();
             Container.Bind<PlayerShootGate>().FromComponentInHierarchy().AsSingle();
             Container.Bind<PlayerFailWatcher>().FromComponentInHierarchy().AsSingle();
@@ -116,7 +110,7 @@ public class GameSceneInstaller : MonoInstaller
 
         if (winScreenPrefab != null)
         {
-            var winBinder = Container.Bind<IResultScreen>().WithId("Win")
+            Container.Bind<IResultScreen>().WithId("Win")
                 .To<WinScreenView>()
                 .FromComponentInNewPrefab(winScreenPrefab)
                 .AsSingle()
@@ -129,7 +123,7 @@ public class GameSceneInstaller : MonoInstaller
 
         if (loseScreenPrefab != null)
         {
-            var loseBinder = Container.Bind<IResultScreen>().WithId("Lose")
+            Container.Bind<IResultScreen>().WithId("Lose")
                 .To<LoseScreenView>()
                 .FromComponentInNewPrefab(loseScreenPrefab)
                 .AsSingle()

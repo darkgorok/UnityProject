@@ -10,20 +10,34 @@ public class PlayerMovement : MonoBehaviour, ITickable
         Moving,
         Reached
     }
+    [System.Serializable]
+    private struct JumpSettings
+    {
+        public float moveSpeed;
+        public float doorReachDistance;
+        public float jumpHeight;
+        public float hopDuration;
+        public float squashScaleY;
+        public float stretchScaleY;
+        public float squashDuration;
+        public float stretchDuration;
+    }
     [Header("References")]
     [SerializeField] private Transform goalTransform;
     [SerializeField] private PlayerMovementConfig config;
 
-    [Header("Movement")]
-    [SerializeField] private float moveSpeed = 4f;
-    [SerializeField] private float doorReachDistance = 1.5f;
-    [SerializeField] private float jumpHeight = 0.6f;
-    [SerializeField] private float hopDuration = 0.4f;
-    [Header("Jump Squash")]
-    [SerializeField] private float squashScaleY = 0.75f;
-    [SerializeField] private float stretchScaleY = 1.2f;
-    [SerializeField] private float squashDuration = 0.08f;
-    [SerializeField] private float stretchDuration = 0.1f;
+    [Header("Jump Settings")]
+    [SerializeField] private JumpSettings jump = new JumpSettings
+    {
+        moveSpeed = 4f,
+        doorReachDistance = 1.5f,
+        jumpHeight = 0.6f,
+        hopDuration = 0.4f,
+        squashScaleY = 0.75f,
+        stretchScaleY = 1.2f,
+        squashDuration = 0.08f,
+        stretchDuration = 0.1f
+    };
 
     [Inject] private IObstacleRegistry _levelManager;
     [Inject(Optional = true)] private IDoor _door;
@@ -118,7 +132,7 @@ public class PlayerMovement : MonoBehaviour, ITickable
         }
 
         _hopTimer += _timeProvider.DeltaTime;
-        var t = Mathf.Clamp01(_hopTimer / Mathf.Max(0.01f, hopDuration));
+        var t = Mathf.Clamp01(_hopTimer / Mathf.Max(0.01f, jump.hopDuration));
         UpdateHop(t);
 
         if (t >= 1f)
@@ -149,13 +163,13 @@ public class PlayerMovement : MonoBehaviour, ITickable
         var direction = goalTransform.position - transform.position;
         direction.y = 0f;
         var distance = direction.magnitude;
-        if (distance <= doorReachDistance)
+        if (distance <= jump.doorReachDistance)
         {
             CheckGoalReached();
             return;
         }
 
-        var stepDistance = Mathf.Min(moveSpeed * hopDuration, distance);
+        var stepDistance = Mathf.Min(jump.moveSpeed * jump.hopDuration, distance);
         if (distance > 0.001f)
             direction /= distance;
         else
@@ -176,14 +190,14 @@ public class PlayerMovement : MonoBehaviour, ITickable
 
         var distance = Vector3.Distance(transform.position, goalTransform.position);
 
-        if (distance <= doorReachDistance)
+        if (distance <= jump.doorReachDistance)
             ReachGoal();
     }
 
     private void UpdateHop(float t)
     {
         var position = Vector3.Lerp(_hopStart, _hopEnd, t);
-        position.y = _baseY + Mathf.Sin(t * Mathf.PI) * jumpHeight;
+        position.y = _baseY + Mathf.Sin(t * Mathf.PI) * jump.jumpHeight;
         transform.position = position;
     }
 
@@ -194,26 +208,26 @@ public class PlayerMovement : MonoBehaviour, ITickable
 
     private void PlaySquashStretch()
     {
-        if (squashDuration <= 0f || stretchDuration <= 0f)
+        if (jump.squashDuration <= 0f || jump.stretchDuration <= 0f)
             return;
 
         if (_squashSequence != null)
             _squashSequence.Kill();
 
         var squashScale = new Vector3(
-            _defaultScale.x * (2f - squashScaleY),
-            _defaultScale.y * squashScaleY,
-            _defaultScale.z * (2f - squashScaleY));
+            _defaultScale.x * (2f - jump.squashScaleY),
+            _defaultScale.y * jump.squashScaleY,
+            _defaultScale.z * (2f - jump.squashScaleY));
 
         var stretchScale = new Vector3(
-            _defaultScale.x * (2f - stretchScaleY),
-            _defaultScale.y * stretchScaleY,
-            _defaultScale.z * (2f - stretchScaleY));
+            _defaultScale.x * (2f - jump.stretchScaleY),
+            _defaultScale.y * jump.stretchScaleY,
+            _defaultScale.z * (2f - jump.stretchScaleY));
 
         _squashSequence = DOTween.Sequence()
-            .Append(transform.DOScale(squashScale, squashDuration).SetEase(Ease.OutQuad))
-            .Append(transform.DOScale(stretchScale, stretchDuration).SetEase(Ease.OutQuad))
-            .Append(transform.DOScale(_defaultScale, stretchDuration).SetEase(Ease.InQuad));
+            .Append(transform.DOScale(squashScale, jump.squashDuration).SetEase(Ease.OutQuad))
+            .Append(transform.DOScale(stretchScale, jump.stretchDuration).SetEase(Ease.OutQuad))
+            .Append(transform.DOScale(_defaultScale, jump.stretchDuration).SetEase(Ease.InQuad));
     }
 
     private void ApplyTuning()
@@ -221,14 +235,14 @@ public class PlayerMovement : MonoBehaviour, ITickable
         if (config == null)
             return;
 
-        moveSpeed = config.moveSpeed;
-        doorReachDistance = config.doorReachDistance;
-        jumpHeight = config.jumpHeight;
-        hopDuration = config.hopDuration;
-        squashScaleY = config.squashScaleY;
-        stretchScaleY = config.stretchScaleY;
-        squashDuration = config.squashDuration;
-        stretchDuration = config.stretchDuration;
+        jump.moveSpeed = config.moveSpeed;
+        jump.doorReachDistance = config.doorReachDistance;
+        jump.jumpHeight = config.jumpHeight;
+        jump.hopDuration = config.hopDuration;
+        jump.squashScaleY = config.squashScaleY;
+        jump.stretchScaleY = config.stretchScaleY;
+        jump.squashDuration = config.squashDuration;
+        jump.stretchDuration = config.stretchDuration;
     }
 
 }
