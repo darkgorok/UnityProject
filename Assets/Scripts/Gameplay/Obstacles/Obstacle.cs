@@ -1,7 +1,6 @@
 using UnityEngine;
 using Zenject;
 
-[RequireComponent(typeof(Collider))]
 public class Obstacle : MonoBehaviour
 {
     [SerializeField] private float destroyDelay = 0.1f;
