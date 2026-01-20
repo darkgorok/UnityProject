@@ -231,8 +231,8 @@ public class PlayerShooting : MonoBehaviour, ITickable
         CancelCharge();
         if (_failController != null)
             _failController.TryFail(reason);
-        else
-            _signalBus?.Fire(new LoseSignal(reason));
+        else if (_gameFlow != null)
+            _gameFlow.SetLose(reason.ToString());
     }
 
     private void HandleStateChanged(GameFlowState state)

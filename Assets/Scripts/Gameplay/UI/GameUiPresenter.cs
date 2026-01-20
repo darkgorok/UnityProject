@@ -2,10 +2,9 @@ using System;
 using UnityEngine;
 using Zenject;
 
-public sealed class GameUiPresenter : IInitializable, IDisposable, ITickable
+public sealed class GameUiPresenter : IInitializable, IDisposable
 {
     private readonly IGameFlowController _gameFlow;
-    private readonly SignalBus _signalBus;
     private readonly IResultScreen _winScreen;
     private readonly IResultScreen _loseScreen;
     private readonly Transform _uiRoot;
@@ -13,13 +12,11 @@ public sealed class GameUiPresenter : IInitializable, IDisposable, ITickable
 
     public GameUiPresenter(
         IGameFlowController gameFlow,
-        SignalBus signalBus,
         [Inject(Id = "Win")] IResultScreen winScreen,
         [Inject(Id = "Lose")] IResultScreen loseScreen,
         [InjectOptional(Id = "UiRoot")] Transform uiRoot)
     {
         _gameFlow = gameFlow;
-        _signalBus = signalBus;
         _winScreen = winScreen;
         _loseScreen = loseScreen;
         _uiRoot = uiRoot;
@@ -37,36 +34,14 @@ public sealed class GameUiPresenter : IInitializable, IDisposable, ITickable
         if (_gameFlow != null)
         {
             _gameFlow.StateChanged += HandleStateChanged;
-            if (_gameFlow.State != GameFlowState.Play)
-                HandleStateChanged(_gameFlow.State);
+            HandleStateChanged(_gameFlow.State);
         }
-
-        _signalBus.Subscribe<WinSignal>(HandleWinSignal);
-        _signalBus.Subscribe<LoseSignal>(HandleLoseSignal);
-    }
-
-    public void Tick()
-    {
-        if (_resultShown || _gameFlow == null)
-            return;
-
-        if (_gameFlow.State == GameFlowState.Win)
-        {
-            ShowWin();
-            return;
-        }
-
-        if (_gameFlow.State == GameFlowState.Lose)
-            ShowLose();
     }
 
     public void Dispose()
     {
         if (_gameFlow != null)
             _gameFlow.StateChanged -= HandleStateChanged;
-
-        _signalBus.TryUnsubscribe<WinSignal>(HandleWinSignal);
-        _signalBus.TryUnsubscribe<LoseSignal>(HandleLoseSignal);
     }
 
     private void HandleStateChanged(GameFlowState state)
@@ -83,16 +58,6 @@ public sealed class GameUiPresenter : IInitializable, IDisposable, ITickable
                 ShowLose();
                 break;
         }
-    }
-
-    private void HandleWinSignal()
-    {
-        ShowWin();
-    }
-
-    private void HandleLoseSignal(LoseSignal signal)
-    {
-        ShowLose();
     }
 
     private void ShowWin()

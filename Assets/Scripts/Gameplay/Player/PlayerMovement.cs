@@ -120,14 +120,7 @@ public class PlayerMovement : MonoBehaviour, ITickable
             return;
 
         _state = MovementState.Reached;
-        if (_gameFlow != null)
-        {
-            _gameFlow.SetWin();
-        }
-        else
-        {
-            _signalBus?.Fire(new WinSignal());
-        }
+        _gameFlow?.SetWin();
     }
 
     private void OnPathCleared()

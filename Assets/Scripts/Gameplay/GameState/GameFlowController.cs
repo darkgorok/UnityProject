@@ -1,5 +1,4 @@
 using System;
-using UnityEngine;
 using Zenject;
 
 public class GameFlowController : IGameFlowController, IInitializable, IDisposable
@@ -22,15 +21,11 @@ public class GameFlowController : IGameFlowController, IInitializable, IDisposab
     public void Initialize()
     {
         _signalBus.Subscribe<GameStartSignal>(HandleGameStart);
-        _signalBus.Subscribe<WinSignal>(HandleWin);
-        _signalBus.Subscribe<LoseSignal>(HandleLose);
     }
 
     public void Dispose()
     {
         _signalBus.TryUnsubscribe<GameStartSignal>(HandleGameStart);
-        _signalBus.TryUnsubscribe<WinSignal>(HandleWin);
-        _signalBus.TryUnsubscribe<LoseSignal>(HandleLose);
     }
 
     public void BeginPlay()
@@ -49,7 +44,6 @@ public class GameFlowController : IGameFlowController, IInitializable, IDisposab
 
         _stateModel.SetWin();
         StateChanged?.Invoke(_stateModel.State);
-        _signalBus.Fire(new WinSignal());
     }
 
     public void SetLose(string reason)
@@ -59,21 +53,10 @@ public class GameFlowController : IGameFlowController, IInitializable, IDisposab
 
         _stateModel.SetLose(reason);
         StateChanged?.Invoke(_stateModel.State);
-        _signalBus.Fire(new LoseSignal(ResultReason.Unknown, reason));
     }
 
     private void HandleGameStart()
     {
         BeginPlay();
-    }
-
-    private void HandleWin()
-    {
-        SetWin();
-    }
-
-    private void HandleLose(LoseSignal signal)
-    {
-        SetLose(signal.Detail ?? signal.Reason.ToString());
     }
 }

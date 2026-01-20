@@ -23,8 +23,6 @@ public class GameSceneInstaller : MonoInstaller
         Container.DeclareSignal<PathClearedSignal>();
         Container.DeclareSignal<ShotReleasedSignal>().OptionalSubscriber();
         Container.DeclareSignal<ShotCompletedSignal>().OptionalSubscriber();
-        Container.DeclareSignal<WinSignal>().OptionalSubscriber();
-        Container.DeclareSignal<LoseSignal>().OptionalSubscriber();
 
         Container.Bind<GameFlowModel>().AsSingle().IfNotBound();
         Container.Bind<IFailController>().To<FailController>().AsSingle().IfNotBound();
@@ -116,7 +114,6 @@ public class GameSceneInstaller : MonoInstaller
             Container.BindInterfacesAndSelfTo<PlayerMovement>().FromComponentInHierarchy().AsSingle().NonLazy();
         }
 
-        Container.Bind<GameUiController>().FromComponentInHierarchy().AsSingle().NonLazy().IfNotBound();
         Container.BindInterfacesAndSelfTo<GameUiPresenter>().AsSingle().NonLazy();
         if (uiRoot != null)
             Container.Bind<Transform>().WithId("UiRoot").FromInstance(uiRoot).AsSingle().IfNotBound();
