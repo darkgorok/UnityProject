@@ -281,6 +281,7 @@ public class PlayerShooting : MonoBehaviour, ITickable
 
         projectileComponent.Completed -= HandleProjectileComplete;
         projectileComponent.Completed += HandleProjectileComplete;
+        projectileComponent.transform.position = transform.position;
         projectileComponent.Initialize(direction, projectileSpeed, shotScale, infectionRadius);
         _activeProjectile = projectileComponent;
     }

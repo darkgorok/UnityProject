@@ -18,6 +18,9 @@ MonoBehaviour:
   projectileSpeed: 8
   shrinkFactor: 0.4
   infectionRadiusMultiplier: 0.8
+  spawnOutDistance: 0.4
+  spawnOutDuration: 0.08
+  spawnOutEase: 6
   minPlayerScaleRatio: 0.2
   criticalPlayerScaleRatio: 0.18
   chargeSquashScale: 0.85
