@@ -13,3 +13,6 @@ MonoBehaviour:
   m_Name: DoorConfig
   m_EditorClassIdentifier: 
   openDistance: 5
+  openAngle: 110
+  openDuration: 0.4
+  openEase: 6

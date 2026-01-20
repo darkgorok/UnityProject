@@ -37,6 +37,10 @@ public class PlayerShooting : MonoBehaviour, ITickable
     [SerializeField] private ProjectileFactory projectileFactory;
     [SerializeField] private PlayerShootingConfig config;
     [SerializeField] private Collider playerCollider;
+    [SerializeField] private PlayerShootInput shootInput;
+    [SerializeField] private PlayerShootGate shootGate;
+    [SerializeField] private PlayerFailWatcher failWatcher;
+    [SerializeField] private PlayerMovement movement;
 
     [Header("Tuning")]
     [SerializeField] private ShotTuning tuning = new ShotTuning
@@ -64,6 +68,11 @@ public class PlayerShooting : MonoBehaviour, ITickable
         && _availableScale > _minPlayerScale && IsGameplayActive();
     public event Action<float> ShotReleased;
     public event Action ShotCompleted;
+    public PlayerShootInput ShootInput => shootInput;
+    public PlayerShootGate ShootGate => shootGate;
+    public PlayerFailWatcher FailWatcher => failWatcher;
+    public PlayerMovement Movement => movement;
+    public ProjectileFactory ProjectileFactoryComponent => projectileFactory;
 
     private float _initialScale;
     private float _availableScale;
@@ -150,10 +159,7 @@ public class PlayerShooting : MonoBehaviour, ITickable
             return false;
         }
 
-        _state = ShootingState.Charging;
-        _chargeTime = 0f;
-        _previewShotScale = tuning.minProjectileScale;
-        PlaySquash(tuning.chargeSquashScale, tuning.chargeSquashDuration);
+        EnterCharging();
         return true;
     }
 
@@ -163,30 +169,7 @@ public class PlayerShooting : MonoBehaviour, ITickable
             return;
 
         _chargeTime += deltaTime;
-        var chargeRatio = Mathf.Clamp01(_chargeTime / tuning.maxChargeTime);
-        var nextShotScale = Mathf.Lerp(tuning.minProjectileScale, tuning.maxProjectileScale, chargeRatio);
-        var maxShotScaleBySize = GetMaxShotScaleBySize();
-
-        if (maxShotScaleBySize <= 0f)
-        {
-            TriggerFailure(ResultReason.NotEnoughSizeForShot);
-            return;
-        }
-
-        nextShotScale = Mathf.Min(nextShotScale, maxShotScaleBySize);
-        _previewShotScale = nextShotScale;
-
-        var shrinkAmount = GetShrinkAmount(_previewShotScale);
-        var temporaryScale = Mathf.Max(_availableScale - shrinkAmount, _minPlayerScale);
-
-        if (_chargeTime >= tuning.maxChargeTime ||
-            Mathf.Abs(nextShotScale - maxShotScaleBySize) <= 0.0001f)
-        {
-            ReleaseShot();
-            return;
-        }
-
-        SetBaseScaleSmoothed(temporaryScale);
+        UpdateCharging();
     }
 
     public void ReleaseShot()
@@ -194,8 +177,7 @@ public class PlayerShooting : MonoBehaviour, ITickable
         if (_state != ShootingState.Charging)
             return;
 
-        _state = ShootingState.Idle;
-        _chargeTime = 0f;
+        ExitCharging();
 
         if (_previewShotScale <= 0f || _blocked || !IsGameplayActive())
         {
@@ -225,8 +207,7 @@ public class PlayerShooting : MonoBehaviour, ITickable
 
     public void CancelCharge()
     {
-        _state = ShootingState.Idle;
-        _chargeTime = 0f;
+        ExitCharging();
         SetBaseScaleImmediate(_availableScale);
         PlaySquash(1f, tuning.releaseExpandDuration);
     }
@@ -457,11 +438,70 @@ public class PlayerShooting : MonoBehaviour, ITickable
         tuning.cooldownDuration = config.cooldownDuration;
     }
 
+    private void EnterCharging()
+    {
+        _state = ShootingState.Charging;
+        _chargeTime = 0f;
+        _previewShotScale = tuning.minProjectileScale;
+        PlaySquash(tuning.chargeSquashScale, tuning.chargeSquashDuration);
+    }
+
+    private void ExitCharging()
+    {
+        _state = ShootingState.Idle;
+        _chargeTime = 0f;
+    }
+
+    private void UpdateCharging()
+    {
+        var maxShotScaleBySize = GetMaxShotScaleBySize();
+        if (maxShotScaleBySize <= 0f)
+        {
+            TriggerFailure(ResultReason.NotEnoughSizeForShot);
+            return;
+        }
+
+        var nextShotScale = CalculateNextShotScale(maxShotScaleBySize);
+        _previewShotScale = nextShotScale;
+
+        if (ShouldAutoRelease(nextShotScale, maxShotScaleBySize))
+        {
+            ReleaseShot();
+            return;
+        }
+
+        var temporaryScale = Mathf.Max(_availableScale - GetShrinkAmount(_previewShotScale), _minPlayerScale);
+        SetBaseScaleSmoothed(temporaryScale);
+    }
+
+    private float CalculateNextShotScale(float maxShotScaleBySize)
+    {
+        var chargeRatio = Mathf.Clamp01(_chargeTime / tuning.maxChargeTime);
+        var nextShotScale = Mathf.Lerp(tuning.minProjectileScale, tuning.maxProjectileScale, chargeRatio);
+        return Mathf.Min(nextShotScale, maxShotScaleBySize);
+    }
+
+    private bool ShouldAutoRelease(float nextShotScale, float maxShotScaleBySize)
+    {
+        return _chargeTime >= tuning.maxChargeTime ||
+               Mathf.Abs(nextShotScale - maxShotScaleBySize) <= 0.0001f;
+    }
+
 #if UNITY_EDITOR
     private void OnValidate()
     {
         if (playerCollider == null)
             playerCollider = GetComponent<Collider>();
+        if (projectileFactory == null)
+            projectileFactory = GetComponent<ProjectileFactory>();
+        if (shootInput == null)
+            shootInput = GetComponent<PlayerShootInput>();
+        if (shootGate == null)
+            shootGate = GetComponent<PlayerShootGate>();
+        if (failWatcher == null)
+            failWatcher = GetComponent<PlayerFailWatcher>();
+        if (movement == null)
+            movement = GetComponent<PlayerMovement>();
     }
 #endif
 }
