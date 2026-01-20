@@ -6,19 +6,22 @@ public class PlayerSquashAnimator : MonoBehaviour
     [SerializeField] private PlayerScaleController scaleController;
     private Tween _squashTween;
 
+    private void Awake()
+    {
+        scaleController = GetComponent<PlayerScaleController>();
+        _squashTween = DOTween.Sequence();
+        _squashTween.Pause();
+    }
+
     public void Play(float targetMultiplier, float duration)
     {
-        if (scaleController == null)
-            return;
-
         if (duration <= 0f)
         {
             scaleController.SetVisualMultiplier(targetMultiplier);
             return;
         }
 
-        if (_squashTween != null)
-            _squashTween.Kill();
+        _squashTween.Kill();
 
         _squashTween = DOTween.To(
                 () => scaleController.VisualMultiplier,
@@ -30,15 +33,6 @@ public class PlayerSquashAnimator : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (_squashTween != null)
-            _squashTween.Kill();
+        _squashTween.Kill();
     }
-
-#if UNITY_EDITOR
-    private void OnValidate()
-    {
-        if (scaleController == null)
-            scaleController = GetComponent<PlayerScaleController>();
-    }
-#endif
 }

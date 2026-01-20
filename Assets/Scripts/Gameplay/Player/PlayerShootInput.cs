@@ -9,17 +9,14 @@ public class PlayerShootInput : MonoBehaviour, ITickable
         Charging
     }
 
-    [Inject] private PlayerShooting _shooting;
+    [Inject] private IPlayerShooting _shooting;
     [Inject] private ITimeProvider _timeProvider;
-    [Inject(Optional = true)] private IInputService _inputService;
+    [Inject] private IInputService _inputService;
 
     private InputState _state = InputState.Idle;
 
     public void Tick()
     {
-        if (_shooting == null)
-            return;
-
         if (_state == InputState.Charging && !_shooting.IsCharging)
             _state = InputState.Idle;
 
@@ -37,16 +34,12 @@ public class PlayerShootInput : MonoBehaviour, ITickable
 
     private bool GetPressed()
     {
-        return _inputService != null
-            ? _inputService.GetMouseButtonDown(0)
-            : Input.GetMouseButtonDown(0);
+        return _inputService.GetMouseButtonDown(0);
     }
 
     private bool GetReleased()
     {
-        return _inputService != null
-            ? _inputService.GetMouseButtonUp(0)
-            : Input.GetMouseButtonUp(0);
+        return _inputService.GetMouseButtonUp(0);
     }
 
     private void HandleIdle()

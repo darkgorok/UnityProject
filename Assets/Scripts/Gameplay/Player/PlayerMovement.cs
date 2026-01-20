@@ -40,11 +40,10 @@ public class PlayerMovement : MonoBehaviour, ITickable
     };
 
     [Inject] private IObstacleRegistry _levelManager;
-    [Inject(Optional = true)] private IDoor _door;
-    [Inject(Optional = true, Id = "Goal")] private Transform _injectedGoal;
-    [Inject(Optional = true)] private IGameFlowController _gameFlow;
+    [Inject(Id = "Goal")] private Transform _injectedGoal;
+    [Inject] private IGameFlowController _gameFlow;
     [Inject] private ITimeProvider _timeProvider;
-    [Inject(Optional = true)] private PlayerShooting _shooting;
+    [Inject] private IPlayerShooting _shooting;
 
     private bool _inHop;
     private float _hopTimer;
@@ -59,29 +58,26 @@ public class PlayerMovement : MonoBehaviour, ITickable
     {
         ApplyTuning();
         _defaultScale = transform.localScale;
-        if (goalTransform == null && _injectedGoal != null)
-            goalTransform = _injectedGoal;
-
+        goalTransform = _injectedGoal;
+        _squashSequence = DOTween.Sequence();
+        _squashSequence.Pause();
     }
 
     private void OnDestroy()
     {
-        if (_squashSequence != null)
-            _squashSequence.Kill();
+        _squashSequence.Kill();
     }
 
     private void OnEnable()
     {
-        if (_levelManager != null)
-            _levelManager.PathCleared += OnPathCleared;
-        if (_levelManager != null && _levelManager.IsPathCleared)
+        _levelManager.PathCleared += OnPathCleared;
+        if (_levelManager.IsPathCleared)
             StartMoving();
     }
 
     private void OnDisable()
     {
-        if (_levelManager != null)
-            _levelManager.PathCleared -= OnPathCleared;
+        _levelManager.PathCleared -= OnPathCleared;
     }
 
     public void Tick()
@@ -106,25 +102,22 @@ public class PlayerMovement : MonoBehaviour, ITickable
         _state = MovementState.Moving;
         _inHop = false;
         _defaultScale = transform.localScale;
-        _shooting?.SetShootingEnabled(false);
+        _shooting.SetShootingEnabled(false);
     }
 
     private bool IsGameplayActive()
     {
-        return _gameFlow == null || _gameFlow.State == GameFlowState.Play;
+        return _gameFlow.State == GameFlowState.Play;
     }
 
     private void TryStartMoving()
     {
-        if (_levelManager != null && _levelManager.IsPathCleared)
+        if (_levelManager.IsPathCleared)
             StartMoving();
     }
 
     private void TickMoving()
     {
-        if (!HasGoal())
-            return;
-
         if (!_inHop)
         {
             StartNextHop();
@@ -149,7 +142,7 @@ public class PlayerMovement : MonoBehaviour, ITickable
             return;
 
         _state = MovementState.Reached;
-        _gameFlow?.SetWin();
+        _gameFlow.SetWin();
     }
 
     private void OnPathCleared()
@@ -185,9 +178,6 @@ public class PlayerMovement : MonoBehaviour, ITickable
 
     private void CheckGoalReached()
     {
-        if (!HasGoal())
-            return;
-
         var distance = Vector3.Distance(transform.position, goalTransform.position);
 
         if (distance <= jump.doorReachDistance)
@@ -201,18 +191,12 @@ public class PlayerMovement : MonoBehaviour, ITickable
         transform.position = position;
     }
 
-    private bool HasGoal()
-    {
-        return goalTransform != null;
-    }
-
     private void PlaySquashStretch()
     {
         if (jump.squashDuration <= 0f || jump.stretchDuration <= 0f)
             return;
 
-        if (_squashSequence != null)
-            _squashSequence.Kill();
+        _squashSequence.Kill();
 
         var squashScale = new Vector3(
             _defaultScale.x * (2f - jump.squashScaleY),
@@ -232,9 +216,6 @@ public class PlayerMovement : MonoBehaviour, ITickable
 
     private void ApplyTuning()
     {
-        if (config == null)
-            return;
-
         jump.moveSpeed = config.moveSpeed;
         jump.doorReachDistance = config.doorReachDistance;
         jump.jumpHeight = config.jumpHeight;

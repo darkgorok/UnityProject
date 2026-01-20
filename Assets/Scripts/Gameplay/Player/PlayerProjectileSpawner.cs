@@ -5,7 +5,7 @@ public class PlayerProjectileSpawner : MonoBehaviour
 {
     [SerializeField] private Projectile projectilePrefab;
     [Inject(Optional = true)] private Projectile.Pool _projectilePool;
-    [Inject(Optional = true)] private DiContainer _container;
+    [Inject] private DiContainer _container;
 
     public Projectile Spawn(Vector3 position, Quaternion rotation)
     {
@@ -16,18 +16,9 @@ public class PlayerProjectileSpawner : MonoBehaviour
             return pooled;
         }
 
-        if (projectilePrefab == null)
-            return null;
-
         var projectile = Instantiate(projectilePrefab);
-        _container?.InjectGameObject(projectile.gameObject);
+        _container.InjectGameObject(projectile.gameObject);
         projectile.transform.SetPositionAndRotation(position, rotation);
         return projectile;
-    }
-
-    public void ValidateReferences(Object context)
-    {
-        if (_projectilePool == null && projectilePrefab == null)
-            Debug.LogError("PlayerProjectileSpawner: projectilePrefab is not assigned and no pool is bound.", context);
     }
 }

@@ -2,7 +2,6 @@ using UnityEngine;
 using Zenject;
 using DG.Tweening;
 
-[RequireComponent(typeof(Collider), typeof(Rigidbody))]
 public class DoorController : MonoBehaviour
 {
     [SerializeField] private float openDistance = 5f;

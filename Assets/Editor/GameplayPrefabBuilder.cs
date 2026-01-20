@@ -114,10 +114,6 @@ public static class GameplayPrefabBuilder
         spawnerSerialized.ApplyModifiedPropertiesWithoutUndo();
 
         var shootingSerialized = new SerializedObject(shooting);
-        shootingSerialized.FindProperty("shootInput").objectReferenceValue = shootInput;
-        shootingSerialized.FindProperty("shootGate").objectReferenceValue = shootGate;
-        shootingSerialized.FindProperty("failWatcher").objectReferenceValue = failWatcher;
-        shootingSerialized.FindProperty("movement").objectReferenceValue = movement;
         shootingSerialized.FindProperty("scaleController").objectReferenceValue = scaleController;
         shootingSerialized.FindProperty("squashAnimator").objectReferenceValue = squashAnimator;
         shootingSerialized.FindProperty("projectileSpawner").objectReferenceValue = spawner;

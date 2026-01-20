@@ -1,7 +1,6 @@
 using System;
 using UnityEngine;
 
-[RequireComponent(typeof(Rigidbody), typeof(Collider))]
 public class Projectile : MonoBehaviour, IProjectile
 {
     public class Pool : Zenject.MonoMemoryPool<Projectile>

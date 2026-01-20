@@ -2,9 +2,7 @@ using System;
 using UnityEngine;
 using Zenject;
 
-[RequireComponent(typeof(Collider))]
-[RequireComponent(typeof(PlayerMarker))]
-public class PlayerShooting : MonoBehaviour
+public class PlayerShooting : MonoBehaviour, IPlayerShooting
 {
     private enum ShootingState
     {
@@ -30,10 +28,6 @@ public class PlayerShooting : MonoBehaviour
     [Header("References")]
     [SerializeField] private ShotTuningConfig tuning;
     [SerializeField] private Collider playerCollider;
-    [SerializeField] private PlayerShootInput shootInput;
-    [SerializeField] private PlayerShootGate shootGate;
-    [SerializeField] private PlayerFailWatcher failWatcher;
-    [SerializeField] private PlayerMovement movement;
     [SerializeField] private PlayerScaleController scaleController;
     [SerializeField] private PlayerSquashAnimator squashAnimator;
     [SerializeField] private PlayerProjectileSpawner projectileSpawner;
@@ -43,31 +37,42 @@ public class PlayerShooting : MonoBehaviour
     private PlayerChargeController _chargeController;
     private readonly CooldownController _cooldownController = new CooldownController();
 
-    public float AvailableScale => scaleController != null ? scaleController.AvailableScale : 0f;
-    public float MinPlayerScale => scaleController != null ? scaleController.MinScale : 0f;
-    public bool IsCharging => _stateMachine.State == ShootingState.Charging;
-    public bool HasActiveProjectile => _activeProjectile != null;
-    public bool CanBeginCharge => !_blocked && _stateMachine.State == ShootingState.Idle && _activeProjectile == null
-        && scaleController != null && scaleController.AvailableScale > scaleController.MinScale && IsGameplayActive();
-    public event Action<float> ShotReleased;
-    public event Action ShotCompleted;
-    public PlayerShootInput ShootInput => shootInput;
-    public PlayerShootGate ShootGate => shootGate;
-    public PlayerFailWatcher FailWatcher => failWatcher;
-    public PlayerMovement Movement => movement;
+    private event Action<float> _shotReleased = delegate { };
+    private event Action _shotCompleted = delegate { };
+    private bool CanBeginCharge => !_blocked && _stateMachine.State == ShootingState.Idle && _activeProjectile == null
+        && scaleController.AvailableScale > scaleController.MinScale && IsGameplayActive();
 
     private float _previewShotScale;
     private bool _blocked;
     private Projectile _activeProjectile;
     private bool _pendingOverchargeFail;
-    [Inject(Optional = true)] private IAimDirectionProvider _aimProvider;
-    [Inject(Optional = true)] private IGameFlowController _gameFlow;
-    [Inject(Optional = true)] private IFailController _failController;
-    [Inject(Optional = true)] private IObstacleRegistry _levelManager;
+    [Inject] private IAimDirectionProvider _aimProvider;
+    [Inject] private IGameFlowController _gameFlow;
+    [Inject] private IFailController _failController;
+    [Inject] private IObstacleRegistry _levelManager;
     [Inject] private ITimeProvider _timeProvider;
+
+    float IPlayerShooting.AvailableScale => scaleController.AvailableScale;
+    float IPlayerShooting.MinPlayerScale => scaleController.MinScale;
+    bool IPlayerShooting.IsCharging => _stateMachine.State == ShootingState.Charging;
+    bool IPlayerShooting.HasActiveProjectile => _activeProjectile != null;
+    event Action<float> IPlayerShooting.ShotReleased
+    {
+        add => _shotReleased += value;
+        remove => _shotReleased -= value;
+    }
+    event Action IPlayerShooting.ShotCompleted
+    {
+        add => _shotCompleted += value;
+        remove => _shotCompleted -= value;
+    }
 
     private void Awake()
     {
+        playerCollider = GetComponent<Collider>();
+        scaleController = GetComponent<PlayerScaleController>();
+        squashAnimator = GetComponent<PlayerSquashAnimator>();
+        projectileSpawner = GetComponent<PlayerProjectileSpawner>();
         _calculator = new ShotCalculator(tuning);
         _chargeController = new PlayerChargeController(tuning, _calculator, scaleController, squashAnimator);
 
@@ -75,32 +80,21 @@ public class PlayerShooting : MonoBehaviour
         scaleController.Initialize(initialScale, tuning.minPlayerScaleRatio, tuning.criticalPlayerScaleRatio);
     }
 
-    private void Start()
-    {
-        ValidateReferences();
-    }
-
     private void OnEnable()
     {
-        if (_gameFlow != null)
-        {
-            _gameFlow.StateChanged += HandleStateChanged;
-            if (_gameFlow.State == GameFlowState.Win || _gameFlow.State == GameFlowState.Lose)
-                SetShootingEnabled(false);
-            else
-                SetShootingEnabled(true);
-        }
+        _gameFlow.StateChanged += HandleStateChanged;
+        if (_gameFlow.State == GameFlowState.Win || _gameFlow.State == GameFlowState.Lose)
+            SetShootingEnabled(false);
+        else
+            SetShootingEnabled(true);
 
-        if (_levelManager != null)
-            _levelManager.PathCleared += HandlePathCleared;
+        _levelManager.PathCleared += HandlePathCleared;
     }
 
     private void OnDisable()
     {
-        if (_gameFlow != null)
-            _gameFlow.StateChanged -= HandleStateChanged;
-        if (_levelManager != null)
-            _levelManager.PathCleared -= HandlePathCleared;
+        _gameFlow.StateChanged -= HandleStateChanged;
+        _levelManager.PathCleared -= HandlePathCleared;
     }
 
     private void Update()
@@ -121,7 +115,7 @@ public class PlayerShooting : MonoBehaviour
     {
         if (!CanBeginCharge)
         {
-            if (!_blocked && _activeProjectile == null && scaleController != null &&
+            if (!_blocked && _activeProjectile == null &&
                 scaleController.AvailableScale <= scaleController.MinScale)
                 TriggerFailure(ResultReason.NotEnoughSizeForShot);
             return false;
@@ -134,9 +128,6 @@ public class PlayerShooting : MonoBehaviour
     public void TickCharge(float deltaTime)
     {
         if (_stateMachine.State != ShootingState.Charging || _blocked)
-            return;
-
-        if (_chargeController == null)
             return;
 
         if (!_chargeController.Tick(deltaTime, out var shouldAutoRelease))
@@ -162,22 +153,21 @@ public class PlayerShooting : MonoBehaviour
 
         if (_previewShotScale <= 0f || _blocked || !IsGameplayActive())
         {
-            if (scaleController != null)
-                scaleController.SetBaseScaleImmediate(scaleController.AvailableScale);
+            scaleController.SetBaseScaleImmediate(scaleController.AvailableScale);
             return;
         }
 
         var shrinkAmount = GetShrinkAmount(_previewShotScale);
-        scaleController?.ApplyShrink(shrinkAmount);
+        scaleController.ApplyShrink(shrinkAmount);
         PlaySquash(1f, tuning.releaseExpandDuration);
 
         SpawnProjectile(_previewShotScale);
         if (!_blocked)
-            ShotReleased?.Invoke(_previewShotScale);
+            _shotReleased(_previewShotScale);
         if (_activeProjectile != null)
             _stateMachine.SetState(ShootingState.ShotInFlight);
 
-        if (scaleController != null && scaleController.AvailableScale <= scaleController.CriticalScale)
+        if (scaleController.AvailableScale <= scaleController.CriticalScale)
         {
             _pendingOverchargeFail = true;
             return;
@@ -189,7 +179,7 @@ public class PlayerShooting : MonoBehaviour
     public void CancelCharge()
     {
         ExitCharging();
-        _chargeController?.CancelCharge();
+        _chargeController.CancelCharge();
     }
 
     public void TriggerFailure(ResultReason reason)
@@ -201,10 +191,7 @@ public class PlayerShooting : MonoBehaviour
         _stateMachine.SetState(ShootingState.Idle);
         _pendingOverchargeFail = false;
         CancelCharge();
-        if (_failController != null)
-            _failController.TryFail(reason);
-        else if (_gameFlow != null)
-            _gameFlow.SetLose(reason.ToString());
+        _failController.TryFail(reason);
     }
 
     private void HandleStateChanged(GameFlowState state)
@@ -221,27 +208,14 @@ public class PlayerShooting : MonoBehaviour
             return;
 
         var spawnPosition = transform.position;
-        var projectileComponent = projectileSpawner != null
-            ? projectileSpawner.Spawn(spawnPosition, Quaternion.identity)
-            : null;
-
-        if (projectileComponent == null)
-            return;
+        var projectileComponent = projectileSpawner.Spawn(spawnPosition, Quaternion.identity);
 
         projectileComponent.transform.localScale = Vector3.one * shotScale;
 
         var projectileCollider = projectileComponent.Collider;
-        if (projectileCollider == null)
-        {
-            Debug.LogError("PlayerShooting: Projectile collider is missing.", projectileComponent);
-            return;
-        }
-        if (playerCollider != null)
-            Physics.IgnoreCollision(playerCollider, projectileCollider);
+        Physics.IgnoreCollision(playerCollider, projectileCollider);
 
-        var direction = _aimProvider != null
-            ? _aimProvider.GetDirection(spawnPosition)
-            : transform.forward;
+        var direction = _aimProvider.GetDirection(spawnPosition);
 
         if (direction.sqrMagnitude <= 0.001f)
             direction = transform.forward;
@@ -274,7 +248,7 @@ public class PlayerShooting : MonoBehaviour
         {
             _stateMachine.SetState(ShootingState.Idle);
         }
-        ShotCompleted?.Invoke();
+        _shotCompleted();
         TryResolvePendingFail();
     }
 
@@ -288,19 +262,17 @@ public class PlayerShooting : MonoBehaviour
 
     private float GetShrinkAmount(float shotScale)
     {
-        return _calculator != null ? _calculator.GetShrinkAmount(shotScale) : 0f;
+        return _calculator.GetShrinkAmount(shotScale);
     }
 
     private void PlaySquash(float targetMultiplier, float duration)
     {
-        if (squashAnimator != null)
-            squashAnimator.Play(targetMultiplier, duration);
+        squashAnimator.Play(targetMultiplier, duration);
     }
 
     private bool IsGameplayActive()
     {
-        return _gameFlow == null ||
-               _gameFlow.State == GameFlowState.Play ||
+        return _gameFlow.State == GameFlowState.Play ||
                _gameFlow.State == GameFlowState.Init;
     }
 
@@ -314,7 +286,7 @@ public class PlayerShooting : MonoBehaviour
         if (!_pendingOverchargeFail)
             return;
 
-        if (_levelManager != null && _levelManager.IsPathCleared)
+        if (_levelManager.IsPathCleared)
         {
             _pendingOverchargeFail = false;
             return;
@@ -324,21 +296,16 @@ public class PlayerShooting : MonoBehaviour
         _pendingOverchargeFail = false;
     }
 
-    private void ValidateReferences()
-    {
-        projectileSpawner.ValidateReferences(this);
-    }
-
     private void EnterCharging()
     {
         _stateMachine.SetState(ShootingState.Charging);
-        _chargeController?.EnterCharge();
-        _previewShotScale = _chargeController != null ? _chargeController.PreviewShotScale : 0f;
+        _chargeController.EnterCharge();
+        _previewShotScale = _chargeController.PreviewShotScale;
     }
 
     private void ExitCharging()
     {
         _stateMachine.SetState(ShootingState.Idle);
-        _chargeController?.ExitCharge();
+        _chargeController.ExitCharge();
     }
 }

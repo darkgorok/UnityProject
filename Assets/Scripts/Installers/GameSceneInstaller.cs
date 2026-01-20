@@ -77,17 +77,17 @@ public class GameSceneInstaller : MonoInstaller
                 .AsCached()
                 .IfNotBound();
             Container.BindInterfacesAndSelfTo<PlayerShootInput>()
-                .FromResolveGetter<PlayerShooting, PlayerShootInput>(shooting => shooting.ShootInput)
+                .FromResolveGetter<PlayerShooting, PlayerShootInput>(shooting => shooting.GetComponent<PlayerShootInput>())
                 .AsSingle()
                 .NonLazy();
             Container.Bind<PlayerShootGate>()
-                .FromResolveGetter<PlayerShooting>(shooting => shooting.ShootGate)
+                .FromResolveGetter<PlayerShooting>(shooting => shooting.GetComponent<PlayerShootGate>())
                 .AsSingle();
             Container.Bind<PlayerFailWatcher>()
-                .FromResolveGetter<PlayerShooting>(shooting => shooting.FailWatcher)
+                .FromResolveGetter<PlayerShooting>(shooting => shooting.GetComponent<PlayerFailWatcher>())
                 .AsSingle();
             Container.BindInterfacesAndSelfTo<PlayerMovement>()
-                .FromResolveGetter<PlayerShooting, PlayerMovement>(shooting => shooting.Movement)
+                .FromResolveGetter<PlayerShooting, PlayerMovement>(shooting => shooting.GetComponent<PlayerMovement>())
                 .AsSingle()
                 .NonLazy();
         }
