@@ -73,15 +73,42 @@ public class PlayerMovement : MonoBehaviour, ITickable
 
     public void Tick()
     {
-        if (_gameFlow != null && _gameFlow.State != GameFlowState.Play)
+        if (!IsGameplayActive())
             return;
 
-        if (_state == MovementState.Idle && _levelManager != null && _levelManager.IsPathCleared)
+        switch (_state)
+        {
+            case MovementState.Idle:
+                TryStartMoving();
+                break;
+            case MovementState.Moving:
+                TickMoving();
+                break;
+        }
+    }
+
+
+    private void StartMoving()
+    {
+        _state = MovementState.Moving;
+        _inHop = false;
+        _defaultScale = transform.localScale;
+        _shooting?.SetShootingEnabled(false);
+    }
+
+    private bool IsGameplayActive()
+    {
+        return _gameFlow == null || _gameFlow.State == GameFlowState.Play;
+    }
+
+    private void TryStartMoving()
+    {
+        if (_levelManager != null && _levelManager.IsPathCleared)
             StartMoving();
+    }
 
-        if (_state != MovementState.Moving)
-            return;
-
+    private void TickMoving()
+    {
         if (goalTransform == null)
             return;
 
@@ -103,15 +130,6 @@ public class PlayerMovement : MonoBehaviour, ITickable
             _inHop = false;
             CheckGoalReached();
         }
-    }
-
-
-    private void StartMoving()
-    {
-        _state = MovementState.Moving;
-        _inHop = false;
-        _defaultScale = transform.localScale;
-        _shooting?.SetShootingEnabled(false);
     }
 
     private void ReachGoal()
