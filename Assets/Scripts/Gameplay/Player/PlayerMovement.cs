@@ -26,6 +26,7 @@ public class PlayerMovement : MonoBehaviour, ITickable
     [Inject(Optional = true)] private IGameFlowController _gameFlow;
     [Inject(Optional = true)] private Zenject.SignalBus _signalBus;
     [Inject(Optional = true)] private ITimeProvider _timeProvider;
+    [Inject(Optional = true)] private PlayerShooting _shooting;
 
     private bool _moving;
     private bool _inHop;
@@ -105,6 +106,7 @@ public class PlayerMovement : MonoBehaviour, ITickable
         _moving = true;
         _inHop = false;
         _defaultScale = transform.localScale;
+        _shooting?.SetShootingEnabled(false);
     }
 
     private void ReachGoal()
