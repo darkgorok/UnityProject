@@ -10,8 +10,6 @@ public class PlayerShootInput : MonoBehaviour, ITickable
     }
 
     [SerializeField] private Camera inputCamera;
-    [SerializeField] private float rayDistance = 100f;
-
     [Inject] private PlayerShooting _shooting;
     [Inject(Optional = true)] private Camera _injectedCamera;
     [Inject(Optional = true)] private ITimeProvider _timeProvider;

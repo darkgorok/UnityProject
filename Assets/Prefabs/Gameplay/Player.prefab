@@ -165,7 +165,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   projectileFactory: {fileID: 6939637792622027813}
-  config: {fileID: 0}
+  config: {fileID: 11400000, guid: 65dba216115931041b65edd8b398cb1b, type: 2}
   playerCollider: {fileID: 4396996879102660483}
   minProjectileScale: 0.3
   maxProjectileScale: 1.5
@@ -193,7 +193,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   inputCamera: {fileID: 0}
-  rayDistance: 100
 --- !u!114 &2275993795671014439
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -231,7 +230,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   goalTransform: {fileID: 0}
-  config: {fileID: 0}
+  config: {fileID: 11400000, guid: 15b442300269f0248b7b5a4057215270, type: 2}
   moveSpeed: 4
   doorReachDistance: 1
   jumpHeight: 0.6

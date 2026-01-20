@@ -98,4 +98,4 @@ MonoBehaviour:
   openDistance: 5
   triggerCollider: {fileID: 905669064097266933}
   doorRigidbody: {fileID: 6167896404742965099}
-  config: {fileID: 0}
+  config: {fileID: 11400000, guid: 2402728983cf85b41909bff7c8712242, type: 2}

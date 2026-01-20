@@ -15,8 +15,8 @@ MonoBehaviour:
   minProjectileScale: 0.3
   maxProjectileScale: 1.5
   maxChargeTime: 1.5
-  projectileSpeed: 11
-  shrinkFactor: 0.7
+  projectileSpeed: 8
+  shrinkFactor: 0.4
   infectionRadiusMultiplier: 0.8
   minPlayerScaleRatio: 0.2
   criticalPlayerScaleRatio: 0.18
@@ -24,3 +24,4 @@ MonoBehaviour:
   chargeSquashDuration: 0.08
   releaseExpandDuration: 0.06
   chargeScaleSmoothTime: 0.08
+  cooldownDuration: 0.1

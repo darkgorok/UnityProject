@@ -154,4 +154,4 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   infectionVfxSource: {fileID: 0}
-  config: {fileID: 0}
+  config: {fileID: 11400000, guid: 6be61574a68b9d442b4fe97dbcd37023, type: 2}
