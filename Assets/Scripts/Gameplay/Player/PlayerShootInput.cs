@@ -10,7 +10,6 @@ public class PlayerShootInput : MonoBehaviour, ITickable
     }
 
     [Inject] private IPlayerShooting _shooting;
-    [Inject] private ITimeProvider _timeProvider;
     [Inject] private IInputService _inputService;
 
     private InputState _state = InputState.Idle;
@@ -53,7 +52,6 @@ public class PlayerShootInput : MonoBehaviour, ITickable
 
     private void HandleCharging()
     {
-        _shooting.TickCharge(_timeProvider.DeltaTime);
         if (GetReleased())
         {
             _shooting.ReleaseShot();

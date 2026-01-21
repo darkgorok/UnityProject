@@ -97,6 +97,8 @@ public class PlayerShooting : MonoBehaviour, IPlayerShooting
     {
         if (_stateMachine.State == ShootingState.Cooldown)
             TickCooldown();
+        if (_stateMachine.State == ShootingState.Charging)
+            TickCharge(_timeProvider.DeltaTime);
     }
 
 
