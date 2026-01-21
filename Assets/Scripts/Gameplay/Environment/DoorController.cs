@@ -14,7 +14,7 @@ public class DoorController : MonoBehaviour
     [SerializeField] private DoorConfig config;
 
     [Inject] private IDoor _door;
-    private Quaternion _closedRotation;
+    private Vector3 _closedLocalPosition;
     private Tween _openTween;
 
     private void Awake()
@@ -23,7 +23,7 @@ public class DoorController : MonoBehaviour
         if (doorPivot == null)
             doorPivot = transform;
 
-        _closedRotation = doorPivot.localRotation;
+        _closedLocalPosition = doorPivot.localPosition;
 
         if (triggerCollider == null)
             Debug.LogError("DoorController: triggerCollider is not assigned.", this);
@@ -78,8 +78,8 @@ public class DoorController : MonoBehaviour
         if (_openTween != null)
             _openTween.Kill();
 
-        var targetRotation = _closedRotation * Quaternion.Euler(0f, openAngle, 0f);
-        _openTween = doorPivot.DOLocalRotateQuaternion(targetRotation, openDuration)
+        var targetPosition = _closedLocalPosition + Vector3.down * openDistance;
+        _openTween = doorPivot.DOLocalMove(targetPosition, openDuration)
             .SetEase(openEase)
             .SetLink(doorPivot.gameObject, LinkBehaviour.KillOnDisable);
     }
